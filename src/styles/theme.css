@@ -1,0 +1,81 @@
+@theme {
+  --color-primary: #FF6B6B;
+  --color-primary-50: #E55450;
+  --color-primary-100: #FF9896;
+  
+  --color-primary-dark: #e63946;
+  --color-primary-light: #ffb3b3;
+
+  --color-blue: #5664ED;
+  --color-blue-dark: #4854D4;
+  --color-blue-50: #4A90E2;
+
+  --color-tertiary: #000000;
+  --color-tertiary-50: #FFFFFF;
+  --color-tertiary-100: #8B949E;
+
+  --color-success: #28A745;
+  --color-success-dark: #155724;
+  --color-success-50: #20C997;
+  --color-warning: #FFC107;
+  --color-warning-dark: #856404;
+  --color-danger: #DC3545;
+  --color-info: #17A2B8;
+  --color-info-dark: #0c5460;
+
+  --color-dark: #343A40;
+  --color-secondary: #6C757D;
+  --color-light: #F8F9FA;
+  --color-white: #FFFFFF;
+  --color-border: #DEE2E6;
+  
+  --color-primary-30: rgba(255,100,96,0.30);
+  --color-blue-30: rgba(86,100,237,0.30);
+
+  --gradient-asisya: 135deg, var(--color-primary) 0%, var(--color-blue) 100%;
+  --gradient-subtle: 135deg, var(--color-primary-30) 0%, var(--color-blue-30) 100%;
+}
+
+@layer utilities {
+  .bg-progress-lines {
+    background-image: linear-gradient(
+      -45deg,
+      rgba(255,255,255,.2) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255,255,255,.2) 50%,
+      rgba(255,255,255,.2) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 50px 50px;
+    animation: progress-move 2s linear infinite;
+  }
+
+  @keyframes progress-move {
+    0%   { background-position: 0 0; }
+    100% { background-position: 50px 50px; }
+  }
+
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  }
+  
+  .bg-gradient-success {
+    background: linear-gradient(135deg, var(--color-success), var(--color-success-50));
+  }
+
+  .bg-gradient-green {
+    background: linear-gradient(135deg, var(--color-success), var(--color-success-50));
+  }
+
+  .bg-modal-header {
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-primary), transparent 95%),
+      color-mix(in srgb, var(--color-primary), transparent 98%)
+    )
+  }
+
+  
+}
