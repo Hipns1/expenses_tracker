@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { dbService } from '@/services/db'
+import { invoiceService } from '@/services/invoices'
 import { Invoice } from '@/types/invoice'
 
 export const useInvoices = () => {
@@ -25,11 +26,19 @@ export const useInvoices = () => {
     }, [fetchInvoices])
 
     const addInvoice = async (invoice: Omit<Invoice, 'id'>) => {
+        // Optimistic update: save locally first
         await dbService.addInvoice(invoice)
         await fetchInvoices()
 
         if (navigator.onLine) {
-            console.log('Online, syncing...')
+            try {
+                console.log('Online, syncing to backend...')
+                await invoiceService.create(invoice as Invoice)
+                // In a real app, we would update the local ID with the remote ID
+                // and mark as synced. For now, we just push to backend.
+            } catch (err) {
+                console.error('Failed to sync invoice', err)
+            }
         }
     }
 

@@ -97,13 +97,13 @@ export const Sidebar = () => {
             role='dialog'
             aria-modal={!isCollapsed ? 'true' : undefined}
             className={cn(
-              'bg-tertiary-50 lgmd:hidden fixed inset-y-0 left-0 z-[55] h-screen w-[280px] shadow-sm',
+              'bg-card-light dark:bg-card-dark lgmd:hidden fixed inset-y-0 left-0 z-[55] h-screen w-[280px] shadow-2xl border-r border-secondary-100 dark:border-secondary-dark',
               'transition-transform duration-300 will-change-transform',
               suppressTransition && 'transition-none',
               isCollapsed ? '-translate-x-full' : 'translate-x-0'
             )}
           >
-            <header className='border-border relative flex items-center justify-center gap-4 border-b p-6'>
+            <header className='border-secondary-100 dark:border-secondary-dark relative flex items-center justify-center gap-4 border-b p-6'>
               <div className='absolute top-3 right-3'>
                 <Button size='icon' variant='ghost' onClick={closeMobile} aria-label='Cerrar menú'>
                   ✕
@@ -119,30 +119,27 @@ export const Sidebar = () => {
                 }}
               >
                 <img src={isologo} alt='Logo de PeritoYa' className='w-[120px]' loading='lazy' />
-                <span className='bg-primary text-tertiary-50 rounded-full px-2 py-1 text-center text-xs font-semibold'>
-                  Premium
-                </span>
               </Button>
             </header>
 
             <nav className='h-dvh pb-28'>
               <ul className='mt-2 flex h-full flex-col justify-between'>
-                <div>
+                <div className="px-2 space-y-1">
                   {accessibleRoutes.map((route) => (
                     <li key={route.id}>
                       <NavItem route={route} isCollapsed={false} onClick={closeMobile} />
                     </li>
                   ))}
                 </div>
-                <li>
-                  <NavItem
-                    route={{
-                      name: 'Cerrar sesion',
-                      icon: <HiLogout className='text-primary h-8 w-auto' />
-                    }}
+                <li className="px-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-danger hover:text-danger-dark hover:bg-danger/10"
                     onClick={() => logout()}
-                    isCollapsed={isCollapsed}
-                  />
+                  >
+                    <HiLogout className='h-5 w-5' />
+                    <span>Cerrar sesión</span>
+                  </Button>
                 </li>
               </ul>
             </nav>
@@ -154,25 +151,22 @@ export const Sidebar = () => {
         <aside
           aria-label='Barra lateral de navegación'
           className={cn(
-            'bg-tertiary-50 relative hidden shadow-sm md:flex md:flex-col',
+            'bg-card-light dark:bg-card-dark relative hidden shadow-xl border-r border-secondary-100 dark:border-secondary-dark md:flex md:flex-col',
             'transition-[width] duration-200',
             suppressTransition && 'transition-none',
-            isCollapsed ? 'w-[54px]' : 'w-[280px]'
+            isCollapsed ? 'w-[70px]' : 'w-[280px]'
           )}
         >
           <header
-            className={cn('border-border flex items-center justify-center gap-4 border-b', isCollapsed ? 'p-3' : 'p-6')}
+            className={cn('border-secondary-100 dark:border-secondary-dark flex items-center justify-center gap-4 border-b h-[72px]', isCollapsed ? 'p-2' : 'p-6')}
           >
             {!isCollapsed ? (
               <Button variant='ghost' className='gap-4 p-0 hover:bg-transparent' onClick={() => navigate('/')}>
-                <img src={isologo} alt='Logo de PeritoYa' className='w-[120px]' loading='lazy' />
-                <span className='bg-primary text-tertiary-50 rounded-full px-2 py-1 text-center text-xs font-semibold'>
-                  Premium
-                </span>
+                <img src={isologo} alt='Logo' className='w-[120px]' loading='lazy' />
               </Button>
             ) : (
               <Button variant='ghost' className='p-0 hover:bg-transparent' onClick={() => navigate('/')} size='icon'>
-                <img src={isotipo} alt='Icono de carro' loading='lazy' />
+                <img src={isotipo} alt='Icono' className="w-8" loading='lazy' />
               </Button>
             )}
           </header>
@@ -180,15 +174,15 @@ export const Sidebar = () => {
           <Button
             size='icon'
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className='bg-tertiary-50 text-secondary absolute top-4 -right-4 z-[56] h-7 w-7 rounded-full shadow-md'
+            className='bg-white dark:bg-card-dark text-primary border border-secondary-100 dark:border-secondary-dark absolute top-6 -right-3 z-[56] h-6 w-6 rounded-full shadow-md hover:scale-110 transition-transform'
             aria-label={isCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
           >
-            {isCollapsed ? <FaChevronRight size={12} /> : <FaChevronLeft size={12} />}
+            {isCollapsed ? <FaChevronRight size={10} /> : <FaChevronLeft size={10} />}
           </Button>
 
-          <nav className='h-full pb-2'>
-            <ul className='mt-2 flex h-full flex-col justify-between'>
-              <div>
+          <nav className='h-full pb-6 pt-4'>
+            <ul className='flex h-full flex-col justify-between px-3'>
+              <div className="space-y-1">
                 {accessibleRoutes.map((route) => (
                   <li key={route.id}>
                     <NavItem route={route} isCollapsed={isCollapsed} onClick={isMdUp ? undefined : closeMobile} />
@@ -196,14 +190,18 @@ export const Sidebar = () => {
                 ))}
               </div>
               <li>
-                <NavItem
-                  route={{
-                    name: 'Cerrar sesion',
-                    icon: <HiLogout className='text-primary h-8 w-auto' />
-                  }}
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full text-danger hover:text-danger-dark hover:bg-danger/10",
+                    isCollapsed ? "justify-center px-0" : "justify-start gap-3"
+                  )}
                   onClick={() => logout()}
-                  isCollapsed={isCollapsed}
-                />
+                  title="Cerrar sesión"
+                >
+                  <HiLogout className='h-5 w-5' />
+                  {!isCollapsed && <span>Cerrar sesión</span>}
+                </Button>
               </li>
             </ul>
           </nav>

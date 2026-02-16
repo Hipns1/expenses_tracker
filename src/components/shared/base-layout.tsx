@@ -26,7 +26,7 @@ export function BaseLayout({
       <Wrapper className='flex h-full w-full min-w-0 flex-1 flex-col'>
         {isHeader && <Header titleHeader={titleHeader} />}
         <main
-          className={cn('bg-light flex h-full w-full flex-1 flex-col gap-4 overflow-y-auto p-8 pb-4', mainClassName)}
+          className={cn('bg-bg-light dark:bg-bg-dark flex h-full w-full flex-1 flex-col gap-4 overflow-y-auto p-8 pb-4 transition-colors duration-300', mainClassName)}
         >
           {children}
         </main>
