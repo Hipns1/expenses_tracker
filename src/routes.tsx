@@ -24,6 +24,14 @@ export const routes: RouteProps[] = [
         element: <NotFound />
       })),
     path: '*'
+  },
+  {
+    isAuthRestricted: false,
+    lazy: async () =>
+      await import('@/pages/invoices').then((module) => ({
+        element: <module.default />
+      })),
+    path: '/invoices'
   }
 ]
 

@@ -1,81 +1,69 @@
 @theme {
-  --color-primary: #FF6B6B;
-  --color-primary-50: #E55450;
-  --color-primary-100: #FF9896;
+  --color-primary: #6C5DD3; /* Modern Indigo */
+  --color-primary-50: #8C82E3;
+  --color-primary-100: #E6E4F8;
   
-  --color-primary-dark: #e63946;
-  --color-primary-light: #ffb3b3;
+  --color-primary-dark: #5044A5;
+  --color-primary-light: #A8A1EB;
 
-  --color-blue: #5664ED;
-  --color-blue-dark: #4854D4;
-  --color-blue-50: #4A90E2;
+  --color-blue: #3E82F7;
+  --color-blue-dark: #2B65C9;
+  --color-blue-50: #6EA3FA;
 
-  --color-tertiary: #000000;
+  --color-tertiary: #1E1F24;
   --color-tertiary-50: #FFFFFF;
-  --color-tertiary-100: #8B949E;
+  --color-tertiary-100: #808191;
 
-  --color-success: #28A745;
-  --color-success-dark: #155724;
-  --color-success-50: #20C997;
-  --color-warning: #FFC107;
-  --color-warning-dark: #856404;
-  --color-danger: #DC3545;
-  --color-info: #17A2B8;
-  --color-info-dark: #0c5460;
-
-  --color-dark: #343A40;
-  --color-secondary: #6C757D;
-  --color-light: #F8F9FA;
-  --color-white: #FFFFFF;
-  --color-border: #DEE2E6;
+  --color-success: #4AD991; /* Vibrant Mint */
+  --color-success-dark: #2D9D63;
+  --color-success-50: #8CEAB9;
   
-  --color-primary-30: rgba(255,100,96,0.30);
-  --color-blue-30: rgba(86,100,237,0.30);
+  --color-warning: #FF9F43; /* Warm Orange */
+  --color-warning-dark: #D47B1E;
+  
+  --color-danger: #FF5B5B; /* Soft Red */
+  --color-info: #00D2FC; /* Neon Cyan */
+  --color-info-dark: #009BB5;
 
-  --gradient-asisya: 135deg, var(--color-primary) 0%, var(--color-blue) 100%;
-  --gradient-subtle: 135deg, var(--color-primary-30) 0%, var(--color-blue-30) 100%;
+  --color-dark: #11142D;
+  --color-secondary: #6C757D;
+  --color-light: #F7F7FA;
+  --color-white: #FFFFFF;
+  --color-border: #E4E4E4;
+  
+  --color-glass: rgba(255, 255, 255, 0.25);
+  --color-glass-border: rgba(255, 255, 255, 0.18);
+  
+  --shadow-premium: 0 10px 40px rgba(0,0,0,0.08);
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.05);
+
+  --gradient-main: 135deg, var(--color-primary) 0%, var(--color-info) 100%;
 }
 
 @layer utilities {
-  .bg-progress-lines {
-    background-image: linear-gradient(
-      -45deg,
-      rgba(255,255,255,.2) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255,255,255,.2) 50%,
-      rgba(255,255,255,.2) 75%,
-      transparent 75%,
-      transparent
-    );
-    background-size: 50px 50px;
-    animation: progress-move 2s linear infinite;
-  }
-
-  @keyframes progress-move {
-    0%   { background-position: 0 0; }
-    100% { background-position: 50px 50px; }
+  .bg-glass {
+    background: var(--color-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: var(--shadow-card);
   }
 
   .bg-gradient-primary {
     background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   }
   
-  .bg-gradient-success {
-    background: linear-gradient(135deg, var(--color-success), var(--color-success-50));
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-info));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-
-  .bg-gradient-green {
-    background: linear-gradient(135deg, var(--color-success), var(--color-success-50));
-  }
-
-  .bg-modal-header {
-    background: linear-gradient(
-      to right,
-      color-mix(in srgb, var(--color-primary), transparent 95%),
-      color-mix(in srgb, var(--color-primary), transparent 98%)
-    )
-  }
-
   
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-premium);
+  }
 }
