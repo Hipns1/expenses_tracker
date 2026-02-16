@@ -1,4 +1,4 @@
-import { apiConfig, postLogout } from '@/services'
+import { postRefresh, postRevoke } from '@/services'
 import { useBoundStore } from '@/hooks/use-bound-store'
 import type { LoginResponse } from '@/types/login'
 import { type Nulleable, SESSION_MINUTES } from '@/utils'
@@ -28,7 +28,7 @@ export function useRefreshToken() {
 
   const fetchSession = useCallback(async () => {
     const { refreshToken } = authRef.current
-    return await apiConfig.post<never, LoginResponse>('auth/refresh', { token: refreshToken })
+    return await postRefresh({ token: refreshToken || '' })
   }, [])
 
   const stopSessionRefreshInterval = useCallback(() => {
@@ -40,14 +40,14 @@ export function useRefreshToken() {
 
   const logout = useCallback(async () => {
     resetAuth()
-    await postLogout(refreshToken || '')
+    await postRevoke({ token: refreshToken || '' })
     setTimeout(() => {
       navigate('/')
       stopSessionRefreshInterval()
       toast.info('Se ha vencido la sesión, debe ingresar nuevamente')
       localStorage.removeItem('roleRoutes')
     }, 100)
-  }, [navigate, resetAuth, stopSessionRefreshInterval])
+  }, [navigate, resetAuth, stopSessionRefreshInterval, refreshToken])
 
   const startSessionRefreshInterval = useCallback(() => {
     if (intervalIdRef.current != null) {

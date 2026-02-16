@@ -21,7 +21,17 @@ export interface LoginProps {
   password: string
 }
 
+export interface RegisterProps {
+  name: string
+  email: string
+  password: string
+  roleId?: number
+}
+
 export interface RefreshProps {
-  refreshToken: string
-  accessToken: string
+  token: string
+}
+
+export interface RevokeProps {
+  token: string
 }

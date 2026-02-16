@@ -1,0 +1,24 @@
+{
+    "auth": {
+        "login": "/Auth/login",
+        "register": "/Auth/register",
+        "refresh": "/Auth/refresh",
+        "revoke": "/Auth/revoke"
+    },
+    "invoices": {
+        "getAll": "/Invoices",
+        "create": "/Invoices",
+        "scan": "/Invoices/scan",
+        "parseText": "/Invoices/parse-text"
+    },
+    "modules": {
+        "getAll": "/Module/all",
+        "create": "/Module/create",
+        "assign": "/Module/assign",
+        "getRoleRoutes": "/Module/roles"
+    },
+    "roles": {
+        "getAll": "/Role",
+        "create": "/Role"
+    }
+}

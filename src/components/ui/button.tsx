@@ -66,13 +66,15 @@ const buttonVariants = cva(
 )
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean
   icon?: React.ReactNode
   iconLeft?: React.ReactNode
   iconRight?: React.ReactNode
   tooltip?: string
   sideTooltip?: 'top' | 'right' | 'bottom' | 'left'
+  variant?: 'primary' | 'tertiary' | 'destructive' | 'ghost' | 'link' | 'invisible' | 'underline'
+  size?: 'default' | 'sm' | 'lg' | 'icon'
   hoverStyle?: 'none' | 'shine' | 'sidebar' | 'create' | 'highlight'
   gradient?: 'none' | 'primary'
 }

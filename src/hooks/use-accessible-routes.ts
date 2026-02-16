@@ -1,7 +1,7 @@
 import { filterAccessibleRoutes, routes } from '@/routes'
 import { useEffect, useState } from 'react'
 import { LoginUserProps } from '@/types/login'
-import { getRoleRoutes } from '@/services/routes'
+import { getRoleRoutes } from '@/services/modules'
 import { useBoundStore } from '@/hooks/use-bound-store'
 import { RouteProps } from '@/types/routes'
 

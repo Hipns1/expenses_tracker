@@ -7,7 +7,7 @@ import { LoginResponse } from '@/types/login'
 import { SERVICES_MSGS } from '@/utils/consts'
 import { useBoundStore } from '@/hooks/use-bound-store'
 import { useHomeStore } from '@/context/home-store'
-import { postLogin, postLogout } from '@/services/login'
+import { postLogin, postRevoke } from '@/services'
 
 type SessionData = Pick<AuthSlice, 'user'>
 
@@ -44,7 +44,7 @@ export function useAuth() {
   const logout = async (): Promise<void> => {
     resetAuth()
     navigate('/')
-    await postLogout(refreshToken || '')
+    await postRevoke({ token: refreshToken || '' })
     localStorage.removeItem('roleRoutes')
   }
 
