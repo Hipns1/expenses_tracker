@@ -1,3 +1,10 @@
+export interface InvoiceItem {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+}
+
 export interface Invoice {
     id?: number | string;
     description: string;
@@ -6,4 +13,5 @@ export interface Invoice {
     synced?: number;
     createdAt?: string;
     category?: string;
+    items?: InvoiceItem[];
 }

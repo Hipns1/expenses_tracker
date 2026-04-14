@@ -22,7 +22,4 @@ export const invoiceService = {
         }) as unknown as Invoice
     },
 
-    async parseText(text: string): Promise<Invoice> {
-        return await apiConfig.post(endpoints.invoices.parseText, { text }) as unknown as Invoice
-    }
 }

@@ -1,5 +1,4 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui'
 import { RouteProps } from '@/types/routes'
 import { cn } from '@/utils/utils'
 
@@ -22,34 +21,48 @@ export const NavItem = ({ route, isCollapsed, onClick }: NavItemProps) => {
       ? `${route?.path}` === decodeURIComponent(location.pathname)
       : decodeURIComponent(location.pathname).startsWith(`${route?.path}`)
 
-  const hanldeClick = () => {
+  const handleClick = () => {
     navigate(route.path ?? '')
     onClick?.()
   }
 
   return (
-    <Button
-      onClick={() => hanldeClick()}
+    <button
+      onClick={handleClick}
+      title={isCollapsed ? route.name : undefined}
       className={cn(
-        'group h-12 justify-start gap-3 truncate rounded-none border-l-2 px-4 py-6 text-sm font-semibold',
-        isActive ? 'bg-primary/[0.12] text-primary border-primary' : 'bg-tertiary-50 text-dark border-transparent'
+        'w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer',
+        isCollapsed ? 'justify-center' : 'justify-start',
+        isActive
+          ? 'bg-primary/10 text-primary'
+          : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-800/50 hover:text-primary'
       )}
     >
-      {typeof route.icon === 'string' ? (
-        <img
-          src={`data:image/png;base64,${route.icon}`}
-          alt={route.name}
-          className={cn(
-            'h-5 w-5 transition',
-            'group-hover:[filter:invert(67%)_sepia(39%)_saturate(4976%)_hue-rotate(327deg)_brightness(104%)_contrast(101%)]',
-            isActive &&
-              '[filter:invert(67%)_sepia(39%)_saturate(4976%)_hue-rotate(327deg)_brightness(104%)_contrast(101%)]'
-          )}
-        />
-      ) : (
-        route.icon
+      {/* Icon */}
+      <span className={cn(
+        'flex-shrink-0 w-5 h-5 flex items-center justify-center transition-colors',
+        isActive ? 'text-primary' : 'text-secondary-400'
+      )}>
+        {typeof route.icon === 'string' ? (
+          <img
+            src={`data:image/png;base64,${route.icon}`}
+            alt={route.name}
+            className='h-4 w-4'
+          />
+        ) : (
+          route.icon
+        )}
+      </span>
+
+      {/* Label */}
+      {!isCollapsed && (
+        <span className='truncate'>{route.name}</span>
       )}
-      {!isCollapsed && <span className='truncate'>{route.name}</span>}
-    </Button>
+
+      {/* Active indicator dot */}
+      {isActive && !isCollapsed && (
+        <span className='ml-auto w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0' />
+      )}
+    </button>
   )
 }

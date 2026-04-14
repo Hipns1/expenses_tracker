@@ -20,5 +20,20 @@
     "roles": {
         "getAll": "/Role",
         "create": "/Role"
+    },
+    "categories": {
+        "getAll": "/Categories",
+        "create": "/Categories",
+        "delete": "/Categories"
+    },
+    "fiscalYears": {
+        "getAll": "/FiscalYears",
+        "create": "/FiscalYears",
+        "delete": "/FiscalYears"
+    },
+    "creditCards": {
+        "getAll": "/CreditCards",
+        "create": "/CreditCards",
+        "delete": "/CreditCards"
     }
 }

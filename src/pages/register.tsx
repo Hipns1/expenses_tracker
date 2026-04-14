@@ -1,15 +1,15 @@
-import { LoginForm } from '@/components/login/login-form'
+import { RegisterForm } from '@/components/register/register-form'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { TrendingUp, PiggyBank, BarChart3, Wallet } from 'lucide-react'
+import { ShieldCheck, Smartphone, RefreshCw, Wallet } from 'lucide-react'
 
 const features = [
-  { icon: TrendingUp, text: 'Registra y analiza tus movimientos' },
-  { icon: PiggyBank, text: 'Visualiza tu ahorro acumulado' },
-  { icon: BarChart3, text: 'Compara tus finanzas entre años' },
+  { icon: ShieldCheck, text: 'Tus datos seguros y privados' },
+  { icon: Smartphone, text: 'Accede desde cualquier dispositivo' },
+  { icon: RefreshCw, text: 'Sincronización con código único' },
 ]
 
-export const Login = () => {
+export const Register = () => {
   return (
     <div className='flex h-screen w-full overflow-hidden'>
 
@@ -22,8 +22,6 @@ export const Login = () => {
           style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} />
         <div className='absolute -bottom-48 -left-24 w-[450px] h-[450px] rounded-full opacity-15'
           style={{ background: 'radial-gradient(circle, #818cf8, transparent)' }} />
-        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-5'
-          style={{ background: 'radial-gradient(circle, #c7d2fe, transparent)' }} />
 
         {/* Logo */}
         <div className='relative z-10 flex items-center gap-3'>
@@ -41,11 +39,11 @@ export const Login = () => {
             transition={{ duration: 0.6 }}
           >
             <h2 className='text-5xl font-bold text-white leading-tight mb-4'>
-              Tu dinero,<br />
-              bajo control.
+              Empieza hoy,<br />
+              sin costo.
             </h2>
             <p className='text-primary-200 text-lg mb-10 leading-relaxed'>
-              Administra ingresos, gastos y ahorro<br />en un solo lugar, sin complicaciones.
+              Crea tu cuenta en segundos y toma<br />el control de tus finanzas personales.
             </p>
 
             <ul className='space-y-4'>
@@ -93,19 +91,19 @@ export const Login = () => {
 
           <div className='mb-8'>
             <h1 className='text-3xl font-bold text-text-main mb-2 tracking-tight'>
-              Bienvenido de nuevo
+              Crear cuenta
             </h1>
             <p className='text-text-muted text-sm'>
-              Ingresa tus credenciales para acceder a tu cuenta.
+              Completa los datos para registrarte en la plataforma.
             </p>
           </div>
 
-          <LoginForm />
+          <RegisterForm />
 
           <p className='text-center text-sm text-text-muted mt-6'>
-            ¿No tienes cuenta?{' '}
-            <Link to='/register' className='text-primary font-semibold hover:underline transition-colors'>
-              Registrarse
+            ¿Ya tienes cuenta?{' '}
+            <Link to='/' className='text-primary font-semibold hover:underline transition-colors'>
+              Iniciar sesión
             </Link>
           </p>
         </motion.div>

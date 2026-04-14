@@ -1,24 +1,31 @@
-import { useState, useRef } from 'react'
-import { useForm, ControllerRenderProps } from 'react-hook-form'
+import { useState, useRef, useEffect } from 'react'
+import { useForm, ControllerRenderProps, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { useInvoices } from '@/hooks/use-invoices'
-import { Loader2, CloudOff, Cloud, FileText, Camera, ScanLine, Edit3 } from 'lucide-react'
+import { Loader2, CloudOff, Cloud, FileText, Camera, ScanLine, Edit3, Plus, Trash2 } from 'lucide-react'
 import { invoiceService } from '@/services'
 import { toast } from 'react-toastify'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/utils'
 import { BaseLayout } from '@/components/shared/base-layout'
-import { extractTextFromImage } from '@/utils/ocr'
+
+const itemSchema = z.object({
+    name: z.string().min(1, "Name required"),
+    quantity: z.coerce.number().min(1, "Qty >= 1"),
+    unitPrice: z.coerce.number().min(0, "Price >= 0"),
+    totalPrice: z.coerce.number().min(0)
+})
 
 const formSchema = z.object({
     description: z.string().min(2, "Description is required"),
-    amount: z.coerce.number().positive("Amount must be positive"),
+    amount: z.coerce.number().min(0, "Amount must be positive"),
     date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date"),
-    category: z.string().optional()
+    category: z.string().optional(),
+    items: z.array(itemSchema).optional()
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -37,9 +44,32 @@ export default function InvoicesPage() {
             description: '',
             amount: 0,
             date: new Date().toISOString().split('T')[0],
-            category: 'General'
+            category: 'General',
+            items: []
         }
     })
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "items"
+    })
+
+    const watchedItems = useWatch({
+        control: form.control,
+        name: "items"
+    })
+
+    // Auto-calculate total amount when items change
+    useEffect(() => {
+        if (watchedItems && watchedItems.length > 0) {
+            const total = watchedItems.reduce((sum, item) => sum + (Number(item?.totalPrice) || 0), 0)
+            // Only update if total is different to avoid loops, and strictly if items exist
+            const currentAmount = form.getValues('amount')
+            if (Math.abs(total - currentAmount) > 0.01) {
+                form.setValue('amount', parseFloat(total.toFixed(2)))
+            }
+        }
+    }, [watchedItems, form])
 
     const onSubmit = async (data: FormValues) => {
         await addInvoice({
@@ -60,49 +90,38 @@ export default function InvoicesPage() {
         const file = e.target.files?.[0]
         if (!file) return
 
-        // Validar tipo de archivo
         if (!file.type.startsWith('image/')) {
             toast.error("Please select a valid image file")
             return
         }
 
         setIsScanning(true)
-        setScanProgress(0)
+        setScanProgress(30)
 
         try {
-            // PASO 1: Ejecutar OCR en el frontend
-            toast.info("Extracting text from image...")
-            const ocrResult = await extractTextFromImage(file, (progress) => {
-                setScanProgress(Math.round(progress * 50)) // 0-50% for OCR
-            })
+            toast.info("Analyzing invoice with AI...")
 
-            console.log('OCR Text extracted:', ocrResult.text)
-            console.log('OCR Confidence:', ocrResult.confidence)
-
-            if (!ocrResult.text || ocrResult.text.trim().length < 10) {
-                throw new Error("Could not extract enough text from image")
-            }
-
-            // PASO 2: Enviar texto a backend para parseo con ChatGPT
-            toast.info("Analyzing invoice data...")
-            setScanProgress(60)
-
-            const parsedInvoice = await invoiceService.parseText(ocrResult.text)
+            const parsedInvoice = await invoiceService.scan(file)
 
             setScanProgress(100)
 
-            // PASO 3: Llenar el formulario con los datos parseados por ChatGPT
             form.setValue('description', parsedInvoice.description || 'Invoice')
             form.setValue('amount', parsedInvoice.amount || 0)
             form.setValue('date', parsedInvoice.date ? new Date(parsedInvoice.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
             form.setValue('category', parsedInvoice.category || 'General')
 
-            toast.success(`Invoice scanned and analyzed! (${ocrResult.confidence.toFixed(0)}% OCR confidence)`)
-            setShowManualForm(true) // Mostrar formulario para revisar/editar
+            if (parsedInvoice.items && parsedInvoice.items.length > 0) {
+                form.setValue('items', parsedInvoice.items)
+            } else {
+                form.setValue('items', [])
+            }
+
+            toast.success("Invoice analyzed successfully!")
+            setShowManualForm(true)
         } catch (error) {
-            console.error('Scan & Parse Error:', error)
+            console.error('Scan error:', error)
             toast.error("Failed to scan invoice. Please enter manually.")
-            setShowManualForm(true) // Permitir entrada manual en caso de error
+            setShowManualForm(true)
         } finally {
             setIsScanning(false)
             setScanProgress(0)
@@ -450,6 +469,125 @@ export default function InvoicesPage() {
                                                         </FormItem>
                                                     )}
                                                 />
+
+                                                {/* Items Section */}
+                                                <div className="space-y-3 pt-4 border-t border-secondary-100 dark:border-secondary-800">
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <h3 className="font-semibold text-text-main dark:text-text-light text-sm">Items</h3>
+                                                            {fields.length === 0 && (
+                                                                <p className="text-xs text-text-muted mt-0.5">No items added yet.</p>
+                                                            )}
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => append({ name: "", quantity: 1, unitPrice: 0, totalPrice: 0 })}
+                                                            className="h-8 text-xs gap-1.5 rounded-lg border-dashed border-secondary-300 dark:border-secondary-600 hover:border-primary hover:text-primary transition-colors"
+                                                        >
+                                                            <Plus size={14} /> Add Item
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                                                        <AnimatePresence>
+                                                            {fields.map((field, index) => (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: "auto" }}
+                                                                    exit={{ opacity: 0, height: 0 }}
+                                                                    key={field.id}
+                                                                    className="grid grid-cols-12 gap-2 items-start bg-secondary-50/50 dark:bg-card-dark/50 p-2.5 rounded-xl border border-secondary-100 dark:border-secondary-800 group hover:border-primary/20 transition-colors"
+                                                                >
+                                                                    <div className="col-span-12">
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`items.${index}.name`}
+                                                                            render={({ field }) => (
+                                                                                <FormItem className="space-y-0">
+                                                                                    <FormControl>
+                                                                                        <Input {...field} placeholder="Item name" className="h-8 text-xs w-full bg-white dark:bg-card-dark border-secondary-200 dark:border-secondary-700" />
+                                                                                    </FormControl>
+                                                                                </FormItem>
+                                                                            )}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="col-span-3">
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`items.${index}.quantity`}
+                                                                            render={({ field }) => (
+                                                                                <FormItem className="space-y-0">
+                                                                                    <FormControl>
+                                                                                        <div className="relative">
+                                                                                            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-text-muted">x</span>
+                                                                                            <Input {...field} type="number" placeholder="Qty" className="h-8 text-xs pl-4 bg-white dark:bg-card-dark border-secondary-200 dark:border-secondary-700"
+                                                                                                onChange={(e) => {
+                                                                                                    field.onChange(e);
+                                                                                                    const qty = parseFloat(e.target.value) || 0;
+                                                                                                    const price = form.getValues(`items.${index}.unitPrice`);
+                                                                                                    form.setValue(`items.${index}.totalPrice`, parseFloat((qty * price).toFixed(2)));
+                                                                                                }}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </FormControl>
+                                                                                </FormItem>
+                                                                            )}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="col-span-4">
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`items.${index}.unitPrice`}
+                                                                            render={({ field }) => (
+                                                                                <FormItem className="space-y-0">
+                                                                                    <FormControl>
+                                                                                        <div className="relative">
+                                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-text-muted">$</span>
+                                                                                            <Input {...field} type="number" step="0.01" placeholder="Price" className="h-8 text-xs pl-5 bg-white dark:bg-card-dark border-secondary-200 dark:border-secondary-700"
+                                                                                                onChange={(e) => {
+                                                                                                    field.onChange(e);
+                                                                                                    const price = parseFloat(e.target.value) || 0;
+                                                                                                    const qty = form.getValues(`items.${index}.quantity`);
+                                                                                                    form.setValue(`items.${index}.totalPrice`, parseFloat((qty * price).toFixed(2)));
+                                                                                                }}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </FormControl>
+                                                                                </FormItem>
+                                                                            )}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="col-span-3">
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`items.${index}.totalPrice`}
+                                                                            render={({ field }) => (
+                                                                                <FormItem className="space-y-0">
+                                                                                    <FormControl>
+                                                                                        <Input {...field} type="number" readOnly className="h-8 text-xs bg-transparent border-none font-bold text-right px-1 text-primary shadow-none focus-visible:ring-0" />
+                                                                                    </FormControl>
+                                                                                </FormItem>
+                                                                            )}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="col-span-2 flex justify-end">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => remove(index)}
+                                                                            className="h-8 w-8 text-secondary-400 hover:text-danger hover:bg-danger/10 p-0"
+                                                                        >
+                                                                            <Trash2 size={14} />
+                                                                        </Button>
+                                                                    </div>
+                                                                </motion.div>
+                                                            ))}
+                                                        </AnimatePresence>
+                                                    </div>
+                                                </div>
 
                                                 {/* Action Buttons */}
                                                 <div className="flex gap-3 pt-4">

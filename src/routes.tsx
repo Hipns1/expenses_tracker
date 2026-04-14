@@ -12,6 +12,14 @@ export const routes: RouteProps[] = [
   {
     isAuthRestricted: true,
     lazy: async () =>
+      await import('@/pages/register').then(({ Register }) => ({
+        element: <Register />
+      })),
+    path: '/register'
+  },
+  {
+    isAuthRestricted: true,
+    lazy: async () =>
       await import('@/pages/login').then(({ Login }) => ({
         element: <Login />
       })),

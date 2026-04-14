@@ -1,7 +1,7 @@
 import { RouteProps } from '@/types'
 import { cn, useIsQueryUp } from '@/utils/utils'
 import { useHomeStore } from '@/context/home-store'
-import { Button, NavItem } from '@/components'
+import { NavItem } from '@/components'
 import isologo from '../../assets/isologo.png'
 import isotipo from '../../assets/isotipo.png'
 import { useNavigate } from 'react-router-dom'
@@ -11,6 +11,8 @@ import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll'
 import { IoMenu } from 'react-icons/io5'
 import { HiLogout } from 'react-icons/hi'
 import { useAuth } from '@/hooks'
+import { Button } from '@/components/ui'
+import { X } from 'lucide-react'
 
 const SUPPRESS_MS = 180
 
@@ -67,8 +69,46 @@ export const Sidebar = () => {
   const openMobile = () => setIsCollapsed(false)
   const closeMobile = () => setIsCollapsed(true)
 
+  /* ── Shared nav content ── */
+  const NavContent = ({ collapsed }: { collapsed: boolean }) => (
+    <div className='flex h-full flex-col'>
+      {/* Menu items */}
+      <nav className='flex-1 overflow-y-auto px-3 py-4'>
+        {!collapsed && (
+          <p className='px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-secondary-400 select-none'>
+            Menú
+          </p>
+        )}
+        <ul className='space-y-0.5'>
+          {accessibleRoutes.map((route) => (
+            <li key={route.id}>
+              <NavItem route={route} isCollapsed={collapsed} onClick={isMdUp ? undefined : closeMobile} />
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Logout */}
+      <div className='px-3 pb-4 border-t border-secondary-100 dark:border-secondary-dark pt-3'>
+        <button
+          onClick={() => logout()}
+          title='Cerrar sesión'
+          className={cn(
+            'w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer',
+            'text-danger hover:bg-danger/10',
+            collapsed ? 'justify-center' : 'justify-start'
+          )}
+        >
+          <HiLogout className='h-5 w-5 flex-shrink-0' />
+          {!collapsed && <span>Cerrar sesión</span>}
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <>
+      {/* Mobile hamburger */}
       {!isMdUp && isCollapsed && (
         <Button
           aria-label='Abrir menú'
@@ -82,11 +122,12 @@ export const Sidebar = () => {
         </Button>
       )}
 
+      {/* Mobile sidebar */}
       {!isMdUp && (
         <>
           {!isCollapsed && (
             <div
-              className={cn('fixed inset-0 z-[50] bg-black/40 md:hidden', suppressTransition && 'transition-none')}
+              className={cn('fixed inset-0 z-[50] bg-black/50 backdrop-blur-sm md:hidden', suppressTransition && 'transition-none')}
               onClick={closeMobile}
               aria-hidden='true'
             />
@@ -97,114 +138,82 @@ export const Sidebar = () => {
             role='dialog'
             aria-modal={!isCollapsed ? 'true' : undefined}
             className={cn(
-              'bg-card-light dark:bg-card-dark lgmd:hidden fixed inset-y-0 left-0 z-[55] h-screen w-[280px] shadow-2xl border-r border-secondary-100 dark:border-secondary-dark',
+              'bg-card-light dark:bg-card-dark fixed inset-y-0 left-0 z-[55] h-screen w-[280px] shadow-2xl border-r border-secondary-100 dark:border-secondary-dark flex flex-col',
               'transition-transform duration-300 will-change-transform',
               suppressTransition && 'transition-none',
               isCollapsed ? '-translate-x-full' : 'translate-x-0'
             )}
           >
-            <header className='border-secondary-100 dark:border-secondary-dark relative flex items-center justify-center gap-4 border-b p-6'>
-              <div className='absolute top-3 right-3'>
-                <Button size='icon' variant='ghost' onClick={closeMobile} aria-label='Cerrar menú'>
-                  ✕
-                </Button>
-              </div>
-
-              <Button
-                variant='ghost'
-                className='gap-4 p-0 hover:bg-transparent'
-                onClick={() => {
-                  navigate('/')
-                  closeMobile()
-                }}
+            {/* Header */}
+            <div className='flex items-center justify-between px-5 py-4 border-b border-secondary-100 dark:border-secondary-dark'>
+              <button
+                onClick={() => { navigate('/'); closeMobile() }}
+                className='flex items-center gap-2.5 hover:opacity-80 transition-opacity'
               >
-                <img src={isologo} alt='Logo de PeritoYa' className='w-[120px]' loading='lazy' />
-              </Button>
-            </header>
+                <img src={isologo} alt='Mis Finanzas' className='w-[110px]' loading='lazy' />
+              </button>
+              <button
+                onClick={closeMobile}
+                className='w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors text-secondary-500'
+                aria-label='Cerrar menú'
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-            <nav className='h-dvh pb-28'>
-              <ul className='mt-2 flex h-full flex-col justify-between'>
-                <div className="px-2 space-y-1">
-                  {accessibleRoutes.map((route) => (
-                    <li key={route.id}>
-                      <NavItem route={route} isCollapsed={false} onClick={closeMobile} />
-                    </li>
-                  ))}
-                </div>
-                <li className="px-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3 text-danger hover:text-danger-dark hover:bg-danger/10"
-                    onClick={() => logout()}
-                  >
-                    <HiLogout className='h-5 w-5' />
-                    <span>Cerrar sesión</span>
-                  </Button>
-                </li>
-              </ul>
-            </nav>
+            <div className='flex-1 overflow-hidden'>
+              <NavContent collapsed={false} />
+            </div>
           </aside>
         </>
       )}
 
+      {/* Desktop sidebar */}
       {isMdUp && (
         <aside
           aria-label='Barra lateral de navegación'
           className={cn(
-            'bg-card-light dark:bg-card-dark relative hidden shadow-xl border-r border-secondary-100 dark:border-secondary-dark md:flex md:flex-col',
+            'bg-card-light dark:bg-card-dark relative hidden shadow-sm border-r border-secondary-100 dark:border-secondary-dark md:flex md:flex-col',
             'transition-[width] duration-200',
             suppressTransition && 'transition-none',
-            isCollapsed ? 'w-[70px]' : 'w-[280px]'
+            isCollapsed ? 'w-[68px]' : 'w-[260px]'
           )}
         >
-          <header
-            className={cn('border-secondary-100 dark:border-secondary-dark flex items-center justify-center gap-4 border-b h-[72px]', isCollapsed ? 'p-2' : 'p-6')}
-          >
+          {/* Header */}
+          <div className={cn(
+            'flex items-center border-b border-secondary-100 dark:border-secondary-dark h-[64px]',
+            isCollapsed ? 'justify-center px-2' : 'px-5'
+          )}>
             {!isCollapsed ? (
-              <Button variant='ghost' className='gap-4 p-0 hover:bg-transparent' onClick={() => navigate('/')}>
-                <img src={isologo} alt='Logo' className='w-[120px]' loading='lazy' />
-              </Button>
+              <button
+                onClick={() => navigate('/')}
+                className='flex items-center gap-2.5 hover:opacity-80 transition-opacity'
+              >
+                <img src={isologo} alt='Mis Finanzas' className='w-[110px]' loading='lazy' />
+              </button>
             ) : (
-              <Button variant='ghost' className='p-0 hover:bg-transparent' onClick={() => navigate('/')} size='icon'>
-                <img src={isotipo} alt='Icono' className="w-8" loading='lazy' />
-              </Button>
+              <button
+                onClick={() => navigate('/')}
+                className='hover:opacity-80 transition-opacity'
+              >
+                <img src={isotipo} alt='Mis Finanzas' className='w-8' loading='lazy' />
+              </button>
             )}
-          </header>
+          </div>
 
-          <Button
-            size='icon'
+          {/* Collapse toggle */}
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className='bg-white dark:bg-card-dark text-primary border border-secondary-100 dark:border-secondary-dark absolute top-6 -right-3 z-[56] h-6 w-6 rounded-full shadow-md hover:scale-110 transition-transform'
+            className='absolute top-5 -right-3 z-[56] h-6 w-6 rounded-full bg-white dark:bg-card-dark border border-secondary-200 dark:border-secondary-dark shadow-md flex items-center justify-center hover:scale-110 transition-transform text-secondary-400 hover:text-primary'
             aria-label={isCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
           >
             {isCollapsed ? <FaChevronRight size={10} /> : <FaChevronLeft size={10} />}
-          </Button>
+          </button>
 
-          <nav className='h-full pb-6 pt-4'>
-            <ul className='flex h-full flex-col justify-between px-3'>
-              <div className="space-y-1">
-                {accessibleRoutes.map((route) => (
-                  <li key={route.id}>
-                    <NavItem route={route} isCollapsed={isCollapsed} onClick={isMdUp ? undefined : closeMobile} />
-                  </li>
-                ))}
-              </div>
-              <li>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full text-danger hover:text-danger-dark hover:bg-danger/10",
-                    isCollapsed ? "justify-center px-0" : "justify-start gap-3"
-                  )}
-                  onClick={() => logout()}
-                  title="Cerrar sesión"
-                >
-                  <HiLogout className='h-5 w-5' />
-                  {!isCollapsed && <span>Cerrar sesión</span>}
-                </Button>
-              </li>
-            </ul>
-          </nav>
+          {/* Nav content */}
+          <div className='flex-1 overflow-hidden'>
+            <NavContent collapsed={isCollapsed} />
+          </div>
         </aside>
       )}
     </>
