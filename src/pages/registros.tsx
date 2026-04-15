@@ -245,7 +245,9 @@ function RecordForm({
     form.amount !== '' &&
     parseInt(form.amount) > 0 &&
     form.month >= 1 &&
-    form.month <= 12
+    form.month <= 12 &&
+    form.categoryId !== '' &&
+    form.creditCardId !== ''
 
   return (
     <div className='flex flex-col gap-4'>
@@ -302,14 +304,14 @@ function RecordForm({
 
       {/* Categoría */}
       <div className='flex flex-col gap-1.5'>
-        <label className='text-sm font-medium text-text-main'>Categoría <span className='text-text-muted font-normal'>(opcional)</span></label>
+        <label className='text-sm font-medium text-text-main'>Categoría</label>
         <div className='relative'>
           <select
             value={form.categoryId}
             onChange={(e) => set('categoryId', e.target.value)}
             className='w-full h-10 appearance-none rounded-xl border border-secondary-200 px-3 pr-9 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white'
           >
-            <option value=''>Sin categoría</option>
+            <option value=''>Selecciona una categoría</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -319,24 +321,22 @@ function RecordForm({
       </div>
 
       {/* Método de pago */}
-      {creditCards.length > 0 && (
-        <div className='flex flex-col gap-1.5'>
-          <label className='text-sm font-medium text-text-main'>Método de pago <span className='text-text-muted font-normal'>(opcional)</span></label>
-          <div className='relative'>
-            <select
-              value={form.creditCardId}
-              onChange={(e) => set('creditCardId', e.target.value)}
-              className='w-full h-10 appearance-none rounded-xl border border-secondary-200 px-3 pr-9 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white'
-            >
-              <option value=''>Sin tarjeta</option>
-              {creditCards.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ···· {c.lastFourDigits}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className='absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 pointer-events-none' />
-          </div>
+      <div className='flex flex-col gap-1.5'>
+        <label className='text-sm font-medium text-text-main'>Método de pago</label>
+        <div className='relative'>
+          <select
+            value={form.creditCardId}
+            onChange={(e) => set('creditCardId', e.target.value)}
+            className='w-full h-10 appearance-none rounded-xl border border-secondary-200 px-3 pr-9 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white'
+          >
+            <option value=''>Selecciona un método de pago</option>
+            {creditCards.map((c) => (
+              <option key={c.id} value={c.id}>{c.name} ···· {c.lastFourDigits}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className='absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 pointer-events-none' />
         </div>
-      )}
+      </div>
 
       {/* Descripción */}
       <div className='flex flex-col gap-1.5'>
