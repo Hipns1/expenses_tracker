@@ -9,7 +9,7 @@ import { toast } from 'react-toastify'
 import {
   Plus, Trash2, Pencil, X, TrendingUp, TrendingDown, Wallet,
   ChevronDown, CalendarDays, Tag, ArrowUpCircle, ArrowDownCircle,
-  ScanLine, Edit3, Loader2
+  ScanLine, Edit3, Loader2, CheckCircle
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -367,7 +367,7 @@ function RecordForm({
           {form.items.length > 0 && (
             <div className='flex flex-col gap-2'>
               {/* Header */}
-              <div className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 px-1'>
+              <div className='grid grid-cols-[1fr_68px_80px_24px] gap-1.5 px-1'>
                 <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide'>Nombre</span>
                 <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide text-center'>Cant.</span>
                 <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide text-right'>P. Unit.</span>
@@ -380,7 +380,7 @@ function RecordForm({
                 const rowTotal = Math.max(0, qty * price - disc)
                 return (
                   <div key={idx} className='flex flex-col gap-1'>
-                    <div className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 items-center'>
+                    <div className='grid grid-cols-[1fr_68px_80px_24px] gap-1.5 items-center'>
                       <input
                         type='text'
                         value={item.name}
@@ -411,11 +411,11 @@ function RecordForm({
                       </button>
                     </div>
                     {rowTotal > 0 && (
-                      <div className='flex justify-end items-center gap-1.5 pr-8'>
+                      <div className='flex justify-end items-center gap-2 pr-8'>
                         {disc > 0 && (
-                          <span className='text-[10px] text-green-600 font-medium'>-{formatCurrency(disc)}</span>
+                          <span className='text-xs text-green-600 font-medium'>-{formatCurrency(disc)}</span>
                         )}
-                        <span className='text-[10px] text-text-muted'>= {formatCurrency(rowTotal)}</span>
+                        <span className='text-xs font-bold text-text-main'>= {formatCurrency(rowTotal)}</span>
                       </div>
                     )}
                   </div>
@@ -582,6 +582,17 @@ export default function Registros() {
         description: form.description || undefined,
         categoryId: form.categoryId ? parseInt(form.categoryId) : null,
         creditCardId: form.creditCardId ? parseInt(form.creditCardId) : null,
+        items: form.items.length > 0 ? form.items.map((it) => {
+          const qty = parseFloat(it.quantity) || 0
+          const price = parseInt(it.unitPrice.replace(/\D/g, '')) || 0
+          const disc = parseInt(it.discount || '0') || 0
+          return {
+            name: it.name,
+            quantity: qty,
+            unitPrice: price,
+            totalPrice: Math.max(0, Math.round(qty * price) - disc),
+          }
+        }) : undefined,
       }
       await recordsService.create(payload)
       const updated = await recordsService.getByYear(selectedYearId)
@@ -621,7 +632,15 @@ export default function Registros() {
     }
   }
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
+
   const handleDelete = async (id: number) => {
+    if (pendingDeleteId !== id) {
+      setPendingDeleteId(id)
+      setTimeout(() => setPendingDeleteId(null), 3000)
+      return
+    }
+    setPendingDeleteId(null)
     try {
       await recordsService.delete(id)
       setRecords((prev) => prev.filter((r) => r.id !== id))
@@ -687,9 +706,13 @@ export default function Registros() {
           </button>
           <button
             onClick={() => handleDelete(record.id)}
-            className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-danger/10 text-danger transition-colors'
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+              pendingDeleteId === record.id
+                ? 'bg-danger text-white'
+                : 'hover:bg-danger/10 text-danger'
+            }`}
           >
-            <Trash2 size={13} />
+            {pendingDeleteId === record.id ? <CheckCircle size={13} /> : <Trash2 size={13} />}
           </button>
         </div>
       </motion.div>

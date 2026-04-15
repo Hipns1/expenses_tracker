@@ -34,6 +34,13 @@ export interface Record {
     items: RecordItem[]
 }
 
+export interface CreateRecordItemPayload {
+    name: string
+    quantity: number
+    unitPrice: number
+    totalPrice: number
+}
+
 export interface CreateRecordPayload {
     type: RecordType
     amount: number
@@ -42,6 +49,7 @@ export interface CreateRecordPayload {
     description?: string
     categoryId?: number | null
     creditCardId?: number | null
+    items?: CreateRecordItemPayload[]
 }
 
 export interface UpdateRecordPayload {
