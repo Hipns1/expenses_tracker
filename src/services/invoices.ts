@@ -15,7 +15,7 @@ export const invoiceService = {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch('https://n8n.jdpf-develop.online/webhook/invoice-scan', {
+        const res = await fetch(import.meta.env.VITE_N8N_INVOICE_SCAN_URL, {
             method: 'POST',
             body: formData,
         })
