@@ -145,6 +145,7 @@ interface InvoiceItemRow {
   name: string
   quantity: string
   unitPrice: string
+  discount?: string
 }
 
 /* ── Form state ── */
@@ -196,7 +197,8 @@ function RecordForm({
     return form.items.reduce((sum, item) => {
       const qty = parseFloat(item.quantity) || 0
       const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
-      return sum + qty * price
+      const disc = parseInt(item.discount || '0') || 0
+      return sum + Math.max(0, qty * price - disc)
     }, 0)
   }, [form.items])
 
@@ -374,7 +376,8 @@ function RecordForm({
               {form.items.map((item, idx) => {
                 const qty = parseFloat(item.quantity) || 0
                 const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
-                const rowTotal = qty * price
+                const disc = parseInt(item.discount || '0') || 0
+                const rowTotal = Math.max(0, qty * price - disc)
                 return (
                   <div key={idx} className='flex flex-col gap-1'>
                     <div className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 items-center'>
@@ -408,7 +411,10 @@ function RecordForm({
                       </button>
                     </div>
                     {rowTotal > 0 && (
-                      <div className='text-right pr-8'>
+                      <div className='flex justify-end items-center gap-1.5 pr-8'>
+                        {disc > 0 && (
+                          <span className='text-[10px] text-green-600 font-medium'>-{formatCurrency(disc)}</span>
+                        )}
                         <span className='text-[10px] text-text-muted'>= {formatCurrency(rowTotal)}</span>
                       </div>
                     )}
@@ -548,6 +554,7 @@ export default function Registros() {
           name: it.name,
           quantity: String(it.quantity),
           unitPrice: String(Math.round(it.unitPrice)),
+          discount: it.discount ? String(it.discount) : undefined,
         })),
       }
       setFormInitial(scannedInitial)

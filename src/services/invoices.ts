@@ -28,11 +28,12 @@ export const invoiceService = {
             description: data.comercio || data.metodo_pago || '',
             amount: data.valor_factura ?? 0,
             date: new Date().toISOString(),
-            items: (data.productos ?? []).map((p: { marca?: string; item: string; cantidad: number; precio_unitario: number }) => ({
+            items: (data.productos ?? []).map((p: { marca?: string; item: string; cantidad: number; precio_unitario: number; ahorro?: number }) => ({
                 name: `${p.marca ? p.marca + ' - ' : ''}${p.item}`,
                 quantity: p.cantidad,
                 unitPrice: p.precio_unitario,
-                totalPrice: Math.round(p.cantidad * p.precio_unitario),
+                totalPrice: Math.round(p.cantidad * p.precio_unitario) - (p.ahorro ?? 0),
+                discount: p.ahorro ?? 0,
             })),
         }
     },
