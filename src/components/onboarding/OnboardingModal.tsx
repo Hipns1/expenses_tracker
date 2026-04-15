@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Wallet, CalendarDays, BookOpen, CreditCard,
-  CheckCircle, ChevronRight, Sparkles
+  CheckCircle, ChevronRight, Sparkles, Building2, Smartphone, Banknote
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { fiscalYearsService } from '@/services/fiscalYears'
 import { categoriesService } from '@/services/categories'
-import { creditCardsService } from '@/services/creditCards'
+import { creditCardsService, type PaymentMethodType } from '@/services/creditCards'
 import { toast } from 'react-toastify'
 
 interface OnboardingModalProps {
@@ -63,6 +63,15 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
   const [categoryName, setCategoryName] = useState('')
   const [cardName, setCardName] = useState('')
   const [cardDigits, setCardDigits] = useState('')
+  const [cardType, setCardType] = useState<PaymentMethodType>('Card')
+
+  const PAYMENT_OPTIONS: { type: PaymentMethodType; label: string; icon: React.ReactNode }[] = [
+    { type: 'Card', label: 'Tarjeta', icon: <CreditCard size={15} /> },
+    { type: 'BankAccount', label: 'Cuenta bancaria', icon: <Building2 size={15} /> },
+    { type: 'DigitalWallet', label: 'Billetera digital', icon: <Smartphone size={15} /> },
+    { type: 'Cash', label: 'Efectivo', icon: <Banknote size={15} /> },
+  ]
+  const showDigits = cardType === 'Card' || cardType === 'BankAccount'
 
   const step = STEPS[currentStep]
   const isLastStep = currentStep === STEPS.length - 1
@@ -92,11 +101,12 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
           toast.error('Ingresa el nombre del método de pago')
           return
         }
-        if (cardDigits.length !== 4) {
-          toast.error('Ingresa exactamente 4 dígitos')
+        if (showDigits && cardDigits.length > 0 && cardDigits.length !== 4) {
+          toast.error('Los dígitos deben ser exactamente 4')
           return
         }
-        await creditCardsService.create(cardName.trim(), cardDigits)
+        const digits = showDigits && cardDigits.length === 4 ? cardDigits : undefined
+        await creditCardsService.create(cardName.trim(), cardType, digits)
       }
 
       if (isLastStep) {
@@ -114,7 +124,7 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
   const canSubmit = () => {
     if (step?.id === 'year') return year.length >= 4
     if (step?.id === 'category') return categoryName.trim().length > 0
-    if (step?.id === 'card') return cardName.trim().length > 0 && cardDigits.length === 4
+    if (step?.id === 'card') return cardName.trim().length > 0
     return true
   }
 
@@ -289,20 +299,44 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
 
                   {step.id === 'card' && (
                     <>
+                      {/* Selector de tipo */}
+                      <div className='grid grid-cols-2 gap-2'>
+                        {PAYMENT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.type}
+                            type='button'
+                            onClick={() => { setCardType(opt.type); setCardDigits('') }}
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                              cardType === opt.type
+                                ? 'bg-primary/10 border-primary text-primary'
+                                : 'border-secondary-200 text-text-muted hover:border-secondary-300 hover:bg-secondary-50'
+                            }`}
+                          >
+                            {opt.icon}
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                       <Input
                         value={cardName}
                         onChange={(e) => setCardName(e.target.value)}
-                        placeholder='Nombre (ej: Visa, Nequi, Efectivo...)'
+                        placeholder={
+                          cardType === 'Card' ? 'Ej: Visa Oro' :
+                          cardType === 'BankAccount' ? 'Ej: Bancolombia' :
+                          cardType === 'DigitalWallet' ? 'Ej: Nequi' : 'Efectivo'
+                        }
                         onKeyDown={(e) => e.key === 'Enter' && canSubmit() && handleSubmit()}
                         autoFocus
                       />
-                      <Input
-                        type='number'
-                        value={cardDigits}
-                        onChange={(e) => setCardDigits(e.target.value.slice(0, 4))}
-                        placeholder='Últimos 4 dígitos'
-                        onKeyDown={(e) => e.key === 'Enter' && canSubmit() && handleSubmit()}
-                      />
+                      {showDigits && (
+                        <Input
+                          type='number'
+                          value={cardDigits}
+                          onChange={(e) => setCardDigits(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder='Últimos 4 dígitos (opcional)'
+                          onKeyDown={(e) => e.key === 'Enter' && canSubmit() && handleSubmit()}
+                        />
+                      )}
                     </>
                   )}
                 </div>

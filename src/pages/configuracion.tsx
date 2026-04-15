@@ -2,13 +2,60 @@ import { useState, useEffect, useRef } from 'react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { categoriesService, type Category } from '@/services/categories'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
-import { creditCardsService, type CreditCard } from '@/services/creditCards'
+import { creditCardsService, type CreditCard, type PaymentMethodType, PAYMENT_METHOD_LABELS } from '@/services/creditCards'
 import { toast } from 'react-toastify'
-import { Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X, CheckCircle, Pencil } from 'lucide-react'
+import { Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X, CheckCircle, Pencil, Building2, Smartphone, Banknote } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+
+/* ── Helpers de tipo de pago ── */
+const PAYMENT_METHOD_OPTIONS: { type: PaymentMethodType; label: string; icon: React.ElementType }[] = [
+  { type: 'Card', label: 'Tarjeta', icon: CreditCardIcon },
+  { type: 'BankAccount', label: 'Cuenta bancaria', icon: Building2 },
+  { type: 'DigitalWallet', label: 'Billetera digital', icon: Smartphone },
+  { type: 'Cash', label: 'Efectivo', icon: Banknote },
+]
+
+function PaymentTypeIcon({ type, size = 14 }: { type: PaymentMethodType; size?: number }) {
+  const opt = PAYMENT_METHOD_OPTIONS.find((o) => o.type === type)
+  if (!opt) return <CreditCardIcon size={size} />
+  const Icon = opt.icon
+  return <Icon size={size} />
+}
+
+const showDigitsForType = (type: PaymentMethodType) => type === 'Card' || type === 'BankAccount'
 
 /* ── Tipos de modal ── */
 type ModalType = 'category' | 'creditCard' | 'year' | 'editCategory' | 'editCreditCard' | null
+
+/* ── Selector de tipo de método de pago ── */
+function PaymentTypeSelector({ value, onChange }: { value: PaymentMethodType; onChange: (v: PaymentMethodType) => void }) {
+  return (
+    <div className='flex flex-col gap-1.5'>
+      <label className='text-sm font-medium text-text-main'>Tipo de método</label>
+      <div className='grid grid-cols-2 gap-2'>
+        {PAYMENT_METHOD_OPTIONS.map((opt) => {
+          const Icon = opt.icon
+          const isSelected = value === opt.type
+          return (
+            <button
+              key={opt.type}
+              type='button'
+              onClick={() => onChange(opt.type)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                isSelected
+                  ? 'bg-primary/10 border-primary text-primary'
+                  : 'border-secondary-200 text-text-muted hover:border-secondary-300 hover:bg-secondary-50'
+              }`}
+            >
+              <Icon size={15} />
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 /* ── Modal simple inline ── */
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -88,12 +135,14 @@ function Section({
 function ItemRow({
   label,
   sublabel,
+  icon,
   onEdit,
   onDelete,
   deleteWarning,
 }: {
   label: string
   sublabel?: string
+  icon?: React.ReactNode
   onEdit?: () => void
   onDelete?: () => void
   deleteWarning?: string
@@ -116,7 +165,9 @@ function ItemRow({
 
   return (
     <li className='flex items-center justify-between py-2 px-3 rounded-xl hover:bg-secondary-50 group transition-colors'>
-      <div className='flex flex-col min-w-0'>
+      <div className='flex items-center gap-2.5 min-w-0'>
+        {icon && <span className='text-text-muted flex-shrink-0'>{icon}</span>}
+        <div className='flex flex-col min-w-0'>
         <div>
           <span className='text-sm font-medium text-text-main'>{label}</span>
           {sublabel && <span className='text-xs text-text-muted ml-2'>{sublabel}</span>}
@@ -133,6 +184,7 @@ function ItemRow({
             </motion.p>
           )}
         </AnimatePresence>
+        </div>
       </div>
       <div className='ml-3 flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all'>
         {onEdit && (
@@ -206,6 +258,7 @@ export default function Configuracion() {
   const [categoryName, setCategoryName] = useState('')
   const [cardName, setCardName] = useState('')
   const [cardDigits, setCardDigits] = useState('')
+  const [cardType, setCardType] = useState<PaymentMethodType>('Card')
   const [yearValue, setYearValue] = useState(String(new Date().getFullYear()))
 
   // Form fields - editar
@@ -214,6 +267,7 @@ export default function Configuracion() {
   const [editingCard, setEditingCard] = useState<CreditCard | null>(null)
   const [editCardName, setEditCardName] = useState('')
   const [editCardDigits, setEditCardDigits] = useState('')
+  const [editCardType, setEditCardType] = useState<PaymentMethodType>('Card')
 
   /* ── Carga inicial ── */
   useEffect(() => {
@@ -227,12 +281,14 @@ export default function Configuracion() {
     setCategoryName('')
     setCardName('')
     setCardDigits('')
+    setCardType('Card')
     setYearValue(String(new Date().getFullYear()))
     setEditingCategory(null)
     setEditCategoryName('')
     setEditingCard(null)
     setEditCardName('')
     setEditCardDigits('')
+    setEditCardType('Card')
   }
 
   const openEditCategory = (c: Category) => {
@@ -244,7 +300,8 @@ export default function Configuracion() {
   const openEditCard = (c: CreditCard) => {
     setEditingCard(c)
     setEditCardName(c.name)
-    setEditCardDigits(c.lastFourDigits)
+    setEditCardDigits(c.lastFourDigits ?? '')
+    setEditCardType(c.type)
     setOpenModal('editCreditCard')
   }
 
@@ -291,25 +348,35 @@ export default function Configuracion() {
   }
 
   const handleAddCard = async () => {
-    if (!cardName.trim() || cardDigits.length !== 4) return
+    if (!cardName.trim()) return
+    if (showDigitsForType(cardType) && cardDigits.length > 0 && cardDigits.length !== 4) {
+      toast.error('Los dígitos deben ser exactamente 4')
+      return
+    }
     setIsSubmitting(true)
     try {
-      const created = await creditCardsService.create(cardName.trim(), cardDigits)
+      const digits = showDigitsForType(cardType) && cardDigits.length === 4 ? cardDigits : undefined
+      const created = await creditCardsService.create(cardName.trim(), cardType, digits)
       setCreditCards((prev) => [...prev, created])
-      toast.success('Tarjeta agregada')
+      toast.success('Método de pago agregado')
       closeModal()
     } catch {
-      toast.error('Error al agregar tarjeta')
+      toast.error('Error al agregar método de pago')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleEditCard = async () => {
-    if (!editingCard || !editCardName.trim() || editCardDigits.length !== 4) return
+    if (!editingCard || !editCardName.trim()) return
+    if (showDigitsForType(editCardType) && editCardDigits.length > 0 && editCardDigits.length !== 4) {
+      toast.error('Los dígitos deben ser exactamente 4')
+      return
+    }
     setIsSubmitting(true)
     try {
-      const updated = await creditCardsService.update(editingCard.id, editCardName.trim(), editCardDigits)
+      const digits = showDigitsForType(editCardType) && editCardDigits.length === 4 ? editCardDigits : undefined
+      const updated = await creditCardsService.update(editingCard.id, editCardName.trim(), editCardType, digits)
       setCreditCards((prev) => prev.map((c) => c.id === updated.id ? updated : c))
       toast.success('Método de pago actualizado')
       closeModal()
@@ -376,20 +443,21 @@ export default function Configuracion() {
           ))}
         </Section>
 
-        {/* ── Tarjetas de crédito ── */}
+        {/* ── Métodos de pago ── */}
         <Section
           icon={CreditCardIcon}
-          title='Tarjetas de Crédito'
+          title='Métodos de Pago'
           onAdd={() => setOpenModal('creditCard')}
           addLabel='Añadir'
           isEmpty={creditCards.length === 0}
-          emptyText='Sin tarjetas de crédito'
+          emptyText='Sin métodos de pago'
         >
           {creditCards.map((c) => (
             <ItemRow
               key={c.id}
               label={c.name}
-              sublabel={`···· ${c.lastFourDigits}`}
+              sublabel={c.lastFourDigits ? `···· ${c.lastFourDigits}` : PAYMENT_METHOD_LABELS[c.type]}
+              icon={<PaymentTypeIcon type={c.type} size={13} />}
               onEdit={() => openEditCard(c)}
               onDelete={() => handleDeleteCard(c.id)}
               deleteWarning='¿Confirmar? Los registros con este método de pago lo perderán.'
@@ -435,27 +503,30 @@ export default function Configuracion() {
         )}
 
         {openModal === 'creditCard' && (
-          <Modal title='Nueva tarjeta de crédito' onClose={closeModal}>
+          <Modal title='Nuevo método de pago' onClose={closeModal}>
             <div className='flex flex-col gap-4'>
+              <PaymentTypeSelector value={cardType} onChange={(v) => { setCardType(v); setCardDigits('') }} />
               <ModalInput
-                label='Nombre de la tarjeta'
+                label='Nombre'
                 value={cardName}
                 onChange={setCardName}
-                placeholder='Ej: Visa Oro'
+                placeholder={cardType === 'Card' ? 'Ej: Visa Oro' : cardType === 'BankAccount' ? 'Ej: Bancolombia' : cardType === 'DigitalWallet' ? 'Ej: Nequi' : 'Efectivo'}
               />
-              <ModalInput
-                label='Últimos 4 dígitos'
-                value={cardDigits}
-                onChange={(v) => setCardDigits(v.replace(/\D/g, '').slice(0, 4))}
-                placeholder='0000'
-                maxLength={4}
-              />
+              {showDigitsForType(cardType) && (
+                <ModalInput
+                  label='Últimos 4 dígitos (opcional)'
+                  value={cardDigits}
+                  onChange={(v) => setCardDigits(v.replace(/\D/g, '').slice(0, 4))}
+                  placeholder='0000'
+                  maxLength={4}
+                />
+              )}
               <button
                 onClick={handleAddCard}
-                disabled={isSubmitting || !cardName.trim() || cardDigits.length !== 4}
+                disabled={isSubmitting || !cardName.trim()}
                 className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
               >
-                {isSubmitting ? 'Guardando...' : 'Guardar tarjeta'}
+                {isSubmitting ? 'Guardando...' : 'Guardar método de pago'}
               </button>
             </div>
           </Modal>
@@ -505,22 +576,25 @@ export default function Configuracion() {
         {openModal === 'editCreditCard' && editingCard && (
           <Modal title='Editar método de pago' onClose={closeModal}>
             <div className='flex flex-col gap-4'>
+              <PaymentTypeSelector value={editCardType} onChange={(v) => { setEditCardType(v); setEditCardDigits('') }} />
               <ModalInput
                 label='Nombre'
                 value={editCardName}
                 onChange={setEditCardName}
                 placeholder='Ej: Visa Oro'
               />
-              <ModalInput
-                label='Últimos 4 dígitos'
-                value={editCardDigits}
-                onChange={(v) => setEditCardDigits(v.replace(/\D/g, '').slice(0, 4))}
-                placeholder='0000'
-                maxLength={4}
-              />
+              {showDigitsForType(editCardType) && (
+                <ModalInput
+                  label='Últimos 4 dígitos (opcional)'
+                  value={editCardDigits}
+                  onChange={(v) => setEditCardDigits(v.replace(/\D/g, '').slice(0, 4))}
+                  placeholder='0000'
+                  maxLength={4}
+                />
+              )}
               <button
                 onClick={handleEditCard}
-                disabled={isSubmitting || !editCardName.trim() || editCardDigits.length !== 4}
+                disabled={isSubmitting || !editCardName.trim()}
                 className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
               >
                 {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
