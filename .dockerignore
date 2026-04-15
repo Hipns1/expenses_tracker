@@ -3,9 +3,8 @@ dist
 .git
 .gitignore
 Dockerfile
-docker-compose.yml
+.dockerignore
 npm-debug.log*
-pnpm-lock.yaml
 yarn.lock
 .vscode
 .idea
