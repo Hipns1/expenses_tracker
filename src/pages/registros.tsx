@@ -145,6 +145,7 @@ interface InvoiceItemRow {
   name: string
   quantity: string
   unitPrice: string
+  totalPrice?: string
 }
 
 /* ── Form state ── */
@@ -194,6 +195,7 @@ function RecordForm({
   // Auto-calcular monto desde ítems cuando hay al menos uno
   const itemsTotal = useMemo(() => {
     return form.items.reduce((sum, item) => {
+      if (item.totalPrice) return sum + (parseFloat(item.totalPrice) || 0)
       const qty = parseFloat(item.quantity) || 0
       const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
       return sum + qty * price
@@ -234,7 +236,9 @@ function RecordForm({
   const updateItem = (idx: number, field: keyof InvoiceItemRow, value: string) => {
     setForm((prev) => {
       const items = [...prev.items]
-      items[idx] = { ...items[idx], [field]: value }
+      const updated = { ...items[idx], [field]: value }
+      if (field === 'quantity' || field === 'unitPrice') updated.totalPrice = undefined
+      items[idx] = updated
       return { ...prev, items }
     })
   }
@@ -374,7 +378,7 @@ function RecordForm({
               {form.items.map((item, idx) => {
                 const qty = parseFloat(item.quantity) || 0
                 const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
-                const rowTotal = qty * price
+                const rowTotal = item.totalPrice ? (parseFloat(item.totalPrice) || 0) : qty * price
                 return (
                   <div key={idx} className='flex flex-col gap-1'>
                     <div className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 items-center'>
@@ -702,6 +706,7 @@ export default function Registros() {
           name: i.name,
           quantity: String(i.quantity),
           unitPrice: String(Math.round(i.unitPrice)),
+          totalPrice: String(i.totalPrice),
         })),
       }
     : EMPTY_FORM
