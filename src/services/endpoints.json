@@ -3,7 +3,8 @@
         "login": "/Auth/login",
         "register": "/Auth/register",
         "refresh": "/Auth/refresh",
-        "revoke": "/Auth/revoke"
+        "revoke": "/Auth/revoke",
+        "me": "/Auth/me"
     },
     "invoices": {
         "getAll": "/Invoices",
@@ -35,5 +36,18 @@
         "getAll": "/CreditCards",
         "create": "/CreditCards",
         "delete": "/CreditCards"
+    },
+    "cardExpenses": {
+        "getByCard": "/CardExpenses/by-card",
+        "create": "/CardExpenses",
+        "delete": "/CardExpenses"
+    },
+    "records": {
+        "getByYear": "/Records/by-year",
+        "compare": "/Records/compare",
+        "savings": "/Records/savings",
+        "create": "/Records",
+        "update": "/Records",
+        "delete": "/Records"
     }
 }

@@ -1,113 +1,213 @@
-import { BaseLayout } from '@/components/shared/base-layout'
-import { useInvoices } from '@/hooks/use-invoices'
-import { Button } from '@/components/ui'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Wallet, ArrowUpRight, Clock, CheckCircle2 } from 'lucide-react'
-import { cn } from '@/utils'
+import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, BookOpen, PiggyBank, BarChart2 } from 'lucide-react'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts'
+import { BaseLayout } from '@/components/shared/base-layout'
+import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
+import { recordsService, type Record as FinanceRecord } from '@/services/records'
+
+const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+const formatCurrency = (n: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
 
 export default function Home() {
-  const { invoices, loading } = useInvoices()
   const navigate = useNavigate()
+  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([])
+  const [selectedYearId, setSelectedYearId] = useState<number | null>(null)
+  const [records, setRecords] = useState<FinanceRecord[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const totalAmount = invoices.reduce((acc, curr) => acc + Number(curr.amount), 0)
-  const pendingSync = invoices.filter(i => !i.synced).length
+  useEffect(() => {
+    fiscalYearsService.getAll().then((years) => {
+      setFiscalYears(years)
+      if (years.length > 0) {
+        const latest = years.reduce((a, b) => (a.year > b.year ? a : b))
+        setSelectedYearId(latest.id)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!selectedYearId) return
+    setLoading(true)
+    recordsService.getByYear(selectedYearId).then((data) => {
+      setRecords(data)
+    }).finally(() => setLoading(false))
+  }, [selectedYearId])
+
+  const { totalIncome, totalExpenses, balance } = useMemo(() => {
+    const totalIncome = records
+      .filter(r => r.type === 'IncomeNormal' || r.type === 'IncomeBonus')
+      .reduce((s, r) => s + r.amount, 0)
+    const totalExpenses = records
+      .filter(r => r.type === 'Expense')
+      .reduce((s, r) => s + r.amount, 0)
+    return { totalIncome, totalExpenses, balance: totalIncome - totalExpenses }
+  }, [records])
+
+  // Monthly data for chart (IncomeNormal only, no bonuses)
+  const chartData = useMemo(() =>
+    MONTHS.map((month, i) => {
+      const monthNum = i + 1
+      const ingresos = records
+        .filter(r => r.month === monthNum && r.type === 'IncomeNormal')
+        .reduce((s, r) => s + r.amount, 0)
+      const gastos = records
+        .filter(r => r.month === monthNum && r.type === 'Expense')
+        .reduce((s, r) => s + r.amount, 0)
+      return { month, Ingresos: ingresos, Gastos: gastos }
+    })
+  , [records])
 
   return (
     <BaseLayout titleHeader="Dashboard">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-primary rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform duration-500">
-            <Wallet size={64} />
-          </div>
-          <h3 className="text-primary-100 font-medium mb-2 opacity-90">Total Expenses</h3>
-          <p className="text-4xl font-bold text-white">
-            ${totalAmount.toFixed(2)}
-          </p>
-          <div className="mt-4 flex items-center gap-2 text-sm opacity-90 font-medium">
-            <ArrowUpRight size={16} />
-            <span>+12% vs last month</span>
-          </div>
-        </motion.div>
+      <div className="flex flex-col gap-6">
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className={cn(
-            "rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group",
-            pendingSync > 0 ? "bg-gradient-to-br from-warning to-warning-dark" : "bg-gradient-to-br from-success to-success-dark"
-          )}
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:rotate-12 transition-transform duration-500">
-            {pendingSync > 0 ? <Clock size={64} /> : <CheckCircle2 size={64} />}
-          </div>
-          <h3 className="font-medium mb-2 opacity-90">Sync Status</h3>
-          <p className="text-4xl font-bold">
-            {pendingSync > 0 ? `${pendingSync} Pending` : "All Synced"}
-          </p>
-          <div className="mt-4 text-sm opacity-90 font-medium">
-            {pendingSync > 0 ? "Go online to sync" : "You are up to date"}
-          </div>
-        </motion.div>
-      </div>
-
-      <div className="mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gradient">Recent Activity</h2>
-          <Button variant="link" onClick={() => navigate('/invoices')} className="text-primary hover:text-primary-dark">View All</Button>
+        {/* Fiscal year selector */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-text-muted font-medium">Año fiscal:</span>
+          <select
+            value={selectedYearId ?? ''}
+            onChange={(e) => setSelectedYearId(Number(e.target.value))}
+            className="text-sm border border-secondary-200 dark:border-secondary-dark rounded-lg px-3 py-1.5 bg-card-light dark:bg-card-dark text-text-main dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            {fiscalYears.length === 0 && <option value="">Sin años fiscales</option>}
+            {fiscalYears.map((y) => (
+              <option key={y.id} value={y.id}>{y.year}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="bg-card-light dark:bg-card-dark rounded-2xl shadow-sm border border-secondary-100 dark:border-secondary-dark overflow-hidden">
+        {/* Summary cards */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card-light dark:bg-card-dark rounded-2xl p-5 border border-secondary-100 dark:border-secondary-dark shadow-sm flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-text-muted">Ingresos</span>
+              <TrendingUp size={18} className="text-success" />
+            </div>
+            <p className="text-2xl font-bold text-text-main dark:text-white">{formatCurrency(totalIncome)}</p>
+            <p className="text-xs text-text-muted">Incluye ingresos normales y bonos</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-card-light dark:bg-card-dark rounded-2xl p-5 border border-secondary-100 dark:border-secondary-dark shadow-sm flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-text-muted">Gastos</span>
+              <TrendingDown size={18} className="text-danger" />
+            </div>
+            <p className="text-2xl font-bold text-text-main dark:text-white">{formatCurrency(totalExpenses)}</p>
+            <p className="text-xs text-text-muted">Total de egresos registrados</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-card-light dark:bg-card-dark rounded-2xl p-5 border border-secondary-100 dark:border-secondary-dark shadow-sm flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-text-muted">Balance</span>
+              {balance >= 0
+                ? <ArrowUpRight size={18} className="text-success" />
+                : <ArrowDownRight size={18} className="text-danger" />
+              }
+            </div>
+            <p className={`text-2xl font-bold ${balance >= 0 ? 'text-success' : 'text-danger'}`}>
+              {formatCurrency(balance)}
+            </p>
+            <p className="text-xs text-text-muted">
+              {balance >= 0 ? 'Estás ahorrando este año' : 'Gastos mayores a ingresos'}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Line chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-card-light dark:bg-card-dark rounded-2xl p-5 border border-secondary-100 dark:border-secondary-dark shadow-sm"
+        >
+          <h3 className="text-sm font-semibold text-text-main dark:text-white mb-1">Evolución mensual</h3>
+          <p className="text-xs text-text-muted mb-4">
+            Comparación de ingresos y gastos sin incluir bonos — año {fiscalYears.find(y => y.id === selectedYearId)?.year ?? '—'}
+          </p>
+
           {loading ? (
-            <div className="p-8 text-center text-text-muted">Loading activity...</div>
-          ) : invoices.length === 0 ? (
-            <div className="p-12 text-center text-text-muted flex flex-col items-center">
-              <div className="w-16 h-16 bg-secondary-100 dark:bg-bg-dark rounded-full flex items-center justify-center mb-4 text-secondary">
-                <Wallet size={24} />
-              </div>
-              <p>No recent activity</p>
-              <Button variant="link" onClick={() => navigate('/invoices')} className="mt-2">Add Expense</Button>
+            <div className="h-48 flex items-center justify-center text-text-muted text-sm">Cargando datos...</div>
+          ) : records.length === 0 ? (
+            <div className="h-48 flex flex-col items-center justify-center gap-2 text-text-muted">
+              <Wallet size={32} className="opacity-30" />
+              <p className="text-sm">Sin registros para este año fiscal</p>
             </div>
           ) : (
-            invoices.slice(0, 5).map((inv, i) => (
-              <motion.div
-                key={inv.id ?? i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="p-5 border-b border-secondary-100 dark:border-secondary-dark last:border-0 flex justify-between items-center hover:bg-bg-light dark:hover:bg-bg-dark/50 transition-colors cursor-pointer group"
-                onClick={() => navigate('/invoices')}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary font-bold text-lg group-hover:scale-110 transition-transform">
-                    {inv.category?.[0]?.toUpperCase() || 'G'}
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">{inv.description}</h4>
-                    <p className="text-xs text-text-muted">{new Date(inv.date).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="font-bold text-text-main dark:text-white">
-                  -${Number(inv.amount).toFixed(2)}
-                </div>
-              </motion.div>
-            ))
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-secondary-100 dark:stroke-secondary-800" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                <Legend />
+                <Line type="monotone" dataKey="Ingresos" stroke="#22c55e" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="Gastos" stroke="#ef4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
           )}
-        </div>
-      </div>
+        </motion.div>
 
-      <div className="mt-8 flex justify-end">
-        <Button
-          onClick={() => navigate('/invoices')}
-          className="bg-gradient-primary text-white shadow-lg hover:shadow-glow hover:-translate-y-1 transition-all px-8 py-6 text-lg rounded-xl font-bold"
+        {/* Quick action buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid gap-3 grid-cols-1 sm:grid-cols-3"
         >
-          Manage Invoices
-        </Button>
+          <button
+            onClick={() => navigate('/registros')}
+            className="flex items-center gap-3 p-4 rounded-xl border border-secondary-100 dark:border-secondary-dark bg-card-light dark:bg-card-dark hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+          >
+            <BookOpen size={20} className="text-primary flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Gestionar registros</p>
+              <p className="text-xs text-text-muted">Ver y editar ingresos y gastos</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/ahorro')}
+            className="flex items-center gap-3 p-4 rounded-xl border border-secondary-100 dark:border-secondary-dark bg-card-light dark:bg-card-dark hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+          >
+            <PiggyBank size={20} className="text-primary flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Ver ahorro</p>
+              <p className="text-xs text-text-muted">Ahorro acumulado por año</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/comparador')}
+            className="flex items-center gap-3 p-4 rounded-xl border border-secondary-100 dark:border-secondary-dark bg-card-light dark:bg-card-dark hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+          >
+            <BarChart2 size={20} className="text-primary flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Ir al comparador</p>
+              <p className="text-xs text-text-muted">Compara dos años fiscales</p>
+            </div>
+          </button>
+        </motion.div>
+
       </div>
     </BaseLayout>
   )

@@ -48,13 +48,15 @@ export function filterAccessibleRoutes(
   isAuthenticated: boolean,
   roleRoutes: RouteProps[] = []
 ): RouteProps[] {
-  const unifyRouter = roleRoutes?.map((route: RouteProps) => {
+  const unifyRouter = roleRoutes?.map((route: RouteProps & { route?: string }) => {
     const newRoutes = {
       isExcludeNav: route?.isExcludeNav,
       isAuthRestricted: false,
-      icon: route?.urlImg ?? '',
-      path: route?.path ?? '',
+      icon: route?.icon ?? route?.urlImg ?? '',
+      path: route?.path ?? route?.route ?? '',
+      name: route?.name,
       titleMenu: route?.name,
+      component: route?.component,
       lazy: async () =>
         await import(`./pages/${route?.component}.tsx`).then((module) => {
           const Component = module.default

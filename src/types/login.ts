@@ -25,7 +25,6 @@ export interface RegisterProps {
   name: string
   email: string
   password: string
-  roleId?: number
 }
 
 export interface RefreshProps {

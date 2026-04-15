@@ -1,6 +1,21 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { RouteProps } from '@/types/routes'
 import { cn } from '@/utils/utils'
+import {
+  LayoutDashboard, BookOpen, BarChart2, PiggyBank, CreditCard,
+  FileText, User, Settings, type LucideIcon
+} from 'lucide-react'
+
+const LUCIDE_ICONS: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  BookOpen,
+  BarChart2,
+  PiggyBank,
+  CreditCard,
+  FileText,
+  User,
+  Settings,
+}
 
 interface NavItemProps {
   route: RouteProps
@@ -43,15 +58,12 @@ export const NavItem = ({ route, isCollapsed, onClick }: NavItemProps) => {
         'flex-shrink-0 w-5 h-5 flex items-center justify-center transition-colors',
         isActive ? 'text-primary' : 'text-secondary-400'
       )}>
-        {typeof route.icon === 'string' ? (
-          <img
-            src={`data:image/png;base64,${route.icon}`}
-            alt={route.name}
-            className='h-4 w-4'
-          />
-        ) : (
-          route.icon
-        )}
+        {typeof route.icon === 'string'
+          ? LUCIDE_ICONS[route.icon]
+            ? (() => { const Icon = LUCIDE_ICONS[route.icon as string]; return <Icon size={18} /> })()
+            : <img src={`data:image/png;base64,${route.icon}`} alt={route.name} className='h-4 w-4' />
+          : route.icon
+        }
       </span>
 
       {/* Label */}

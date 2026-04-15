@@ -25,7 +25,13 @@ export const Sidebar = () => {
   const { logout } = useAuth()
 
   const storedRoutes = localStorage.getItem('roleRoutes')
-  const accessibleRoutes: RouteProps[] = storedRoutes ? JSON.parse(storedRoutes) : []
+  const accessibleRoutes: RouteProps[] = storedRoutes
+    ? (JSON.parse(storedRoutes) as Array<RouteProps & { route?: string }>).map((r) => ({
+        ...r,
+        path: r.path ?? r.route ?? '',
+        icon: r.icon ?? (r as unknown as { urlImg?: string }).urlImg ?? '',
+      }))
+    : []
 
   const prevIsLgUp = useRef<boolean>(isMdUp)
   const isFirstRun = useRef(true)
@@ -80,7 +86,7 @@ export const Sidebar = () => {
           </p>
         )}
         <ul className='space-y-0.5'>
-          {accessibleRoutes.map((route) => (
+          {accessibleRoutes.filter(r => !r.isExcludeNav).map((route) => (
             <li key={route.id}>
               <NavItem route={route} isCollapsed={collapsed} onClick={isMdUp ? undefined : closeMobile} />
             </li>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm, ControllerRenderProps, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -6,8 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { useInvoices } from '@/hooks/use-invoices'
-import { Loader2, CloudOff, Cloud, FileText, Camera, ScanLine, Edit3, Plus, Trash2 } from 'lucide-react'
+import { Loader2, CloudOff, Cloud, FileText, Camera, ScanLine, Edit3, Plus, Trash2, CreditCard, Settings } from 'lucide-react'
 import { invoiceService } from '@/services'
+import { cardExpensesService } from '@/services/cardExpenses'
+import { creditCardsService, type CreditCard as CreditCardType } from '@/services/creditCards'
 import { toast } from 'react-toastify'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/utils'
@@ -31,12 +34,23 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export default function InvoicesPage() {
-    const { invoices, loading, addInvoice } = useInvoices()
+    const navigate = useNavigate()
+    const { invoices, loading } = useInvoices()
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [isScanning, setIsScanning] = useState(false)
     const [scanProgress, setScanProgress] = useState(0)
     const [showManualForm, setShowManualForm] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const [creditCards, setCreditCards] = useState<CreditCardType[]>([])
+    const [loadingCards, setLoadingCards] = useState(true)
+    const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
+
+    useEffect(() => {
+        creditCardsService.getAll().then(cards => {
+            setCreditCards(cards)
+            if (cards.length > 0) setSelectedCardId(cards[0].id)
+        }).finally(() => setLoadingCards(false))
+    }, [])
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -72,14 +86,24 @@ export default function InvoicesPage() {
     }, [watchedItems, form])
 
     const onSubmit = async (data: FormValues) => {
-        await addInvoice({
-            ...data,
-            synced: 0
-        })
-        setIsFormOpen(false)
-        setShowManualForm(false)
-        form.reset()
-        toast.success("Invoice saved successfully!")
+        if (!selectedCardId) {
+            toast.error("Selecciona una tarjeta de crédito.")
+            return
+        }
+        try {
+            await cardExpensesService.create({
+                amount: data.amount,
+                description: data.description,
+                date: new Date(data.date).toISOString(),
+                creditCardId: selectedCardId
+            })
+            setIsFormOpen(false)
+            setShowManualForm(false)
+            form.reset()
+            toast.success("Gasto registrado en la tarjeta.")
+        } catch {
+            toast.error("No se pudo guardar el gasto.")
+        }
     }
 
     const handleScanClick = () => {
@@ -138,6 +162,35 @@ export default function InvoicesPage() {
         setIsFormOpen(false)
         setShowManualForm(false)
         form.reset()
+    }
+
+    if (loadingCards) {
+        return (
+            <BaseLayout titleHeader="Cargar Factura">
+                <div className="text-sm text-text-muted">Cargando tarjetas...</div>
+            </BaseLayout>
+        )
+    }
+
+    if (!loadingCards && creditCards.length === 0) {
+        return (
+            <BaseLayout titleHeader="Cargar Factura">
+                <div className="bg-card-light dark:bg-card-dark rounded-2xl p-10 border border-secondary-100 dark:border-secondary-dark flex flex-col items-center gap-4 text-text-muted">
+                    <CreditCard size={40} className="opacity-30" />
+                    <div className="text-center">
+                        <p className="text-sm font-semibold text-text-main dark:text-white">No hay tarjetas disponibles</p>
+                        <p className="text-xs mt-1">Primero debes crear una tarjeta de crédito antes de cargar facturas.</p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/configuracion')}
+                        className="flex items-center gap-2 text-sm text-primary font-medium hover:underline"
+                    >
+                        <Settings size={15} />
+                        Ir a Configuración
+                    </button>
+                </div>
+            </BaseLayout>
+        )
     }
 
     return (
@@ -395,6 +448,22 @@ export default function InvoicesPage() {
                                     ) : (
                                         <Form {...form}>
                                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-5">
+                                                {/* Card selector */}
+                                                <div className="space-y-1.5">
+                                                    <label className="text-sm font-semibold text-text-main dark:text-text-light flex items-center gap-1.5">
+                                                        <CreditCard size={15} /> Tarjeta de crédito
+                                                    </label>
+                                                    <select
+                                                        value={selectedCardId ?? ''}
+                                                        onChange={(e) => setSelectedCardId(Number(e.target.value))}
+                                                        className="w-full h-11 text-sm border border-secondary-200 dark:border-secondary-700 rounded-xl px-3 bg-white dark:bg-card-dark text-text-main dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                                    >
+                                                        {creditCards.map(c => (
+                                                            <option key={c.id} value={c.id}>{c.name} •••• {c.lastFourDigits}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
                                                 <FormField
                                                     control={form.control}
                                                     name="description"
@@ -481,7 +550,7 @@ export default function InvoicesPage() {
                                                         </div>
                                                         <Button
                                                             type="button"
-                                                            variant="outline"
+                                                            variant="tertiary"
                                                             size="sm"
                                                             onClick={() => append({ name: "", quantity: 1, unitPrice: 0, totalPrice: 0 })}
                                                             className="h-8 text-xs gap-1.5 rounded-lg border-dashed border-secondary-300 dark:border-secondary-600 hover:border-primary hover:text-primary transition-colors"

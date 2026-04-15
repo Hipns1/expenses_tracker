@@ -4,6 +4,7 @@ import endpoints from './endpoints.json'
 export interface Category {
     id: number
     name: string
+    isSystem?: boolean
 }
 
 export const categoriesService = {

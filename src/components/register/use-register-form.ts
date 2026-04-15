@@ -22,8 +22,7 @@ export const useRegisterForm = () => {
       await postRegister({
         name: data.name,
         email: data.email,
-        password: data.password,
-        roleId: 1
+        password: data.password
       })
       toast.success('Cuenta creada exitosamente. Inicia sesión.')
       navigate('/')
