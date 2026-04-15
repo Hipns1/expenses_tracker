@@ -918,6 +918,7 @@ export default function Registros() {
         {modalMode === 'edit' && editingRecord && (
           <Modal title='Editar registro' onClose={closeModal}>
             <RecordForm
+              key={editingRecord.id}
               initial={editInitial}
               categories={categories}
               creditCards={creditCards}
