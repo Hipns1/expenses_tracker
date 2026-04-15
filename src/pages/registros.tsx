@@ -144,8 +144,7 @@ function SummaryCard({ label, amount, icon: Icon, color, bg }: {
 interface InvoiceItemRow {
   name: string
   quantity: string
-  unitPrice: string
-  totalPrice?: string
+  totalPrice: string
 }
 
 /* ── Form state ── */
@@ -195,10 +194,7 @@ function RecordForm({
   // Auto-calcular monto desde ítems cuando hay al menos uno
   const itemsTotal = useMemo(() => {
     return form.items.reduce((sum, item) => {
-      if (item.totalPrice) return sum + (parseFloat(item.totalPrice) || 0)
-      const qty = parseFloat(item.quantity) || 0
-      const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
-      return sum + qty * price
+      return sum + (parseInt(item.totalPrice.replace(/\D/g, '')) || 0)
     }, 0)
   }, [form.items])
 
@@ -222,7 +218,7 @@ function RecordForm({
   const addItem = () => {
     setForm((prev) => ({
       ...prev,
-      items: [...prev.items, { name: '', quantity: '1', unitPrice: '' }],
+      items: [...prev.items, { name: '', quantity: '1', totalPrice: '' }],
     }))
   }
 
@@ -236,9 +232,7 @@ function RecordForm({
   const updateItem = (idx: number, field: keyof InvoiceItemRow, value: string) => {
     setForm((prev) => {
       const items = [...prev.items]
-      const updated = { ...items[idx], [field]: value }
-      if (field === 'quantity' || field === 'unitPrice') updated.totalPrice = undefined
-      items[idx] = updated
+      items[idx] = { ...items[idx], [field]: value }
       return { ...prev, items }
     })
   }
@@ -372,52 +366,40 @@ function RecordForm({
               <div className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 px-1'>
                 <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide'>Nombre</span>
                 <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide text-center'>Cant.</span>
-                <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide text-right'>P. Unit.</span>
+                <span className='text-[10px] font-semibold text-text-muted uppercase tracking-wide text-right'>Total</span>
                 <span />
               </div>
-              {form.items.map((item, idx) => {
-                const qty = parseFloat(item.quantity) || 0
-                const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
-                const rowTotal = item.totalPrice ? (parseFloat(item.totalPrice) || 0) : qty * price
-                return (
-                  <div key={idx} className='flex flex-col gap-1'>
-                    <div className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 items-center'>
-                      <input
-                        type='text'
-                        value={item.name}
-                        onChange={(e) => updateItem(idx, 'name', e.target.value)}
-                        placeholder='Descripción'
-                        className='h-8 rounded-lg border border-secondary-200 px-2 text-xs text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
-                      />
-                      <input
-                        type='number'
-                        value={item.quantity}
-                        onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                        min='1'
-                        className='h-8 rounded-lg border border-secondary-200 px-2 text-xs text-text-main text-center focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
-                      />
-                      <CurrencyInput
-                        value={item.unitPrice}
-                        onChange={(val) => updateItem(idx, 'unitPrice', val)}
-                        placeholder='0'
-                        className='h-8 w-full rounded-lg border border-secondary-200 px-2 text-xs text-text-main text-right placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
-                      />
-                      <button
-                        type='button'
-                        onClick={() => removeItem(idx)}
-                        className='w-6 h-6 flex items-center justify-center rounded-md hover:bg-danger/10 text-danger/50 hover:text-danger transition-colors'
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                    {rowTotal > 0 && (
-                      <div className='text-right pr-8'>
-                        <span className='text-[10px] text-text-muted'>= {formatCurrency(rowTotal)}</span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              {form.items.map((item, idx) => (
+                <div key={idx} className='grid grid-cols-[1fr_48px_80px_24px] gap-1.5 items-center'>
+                  <input
+                    type='text'
+                    value={item.name}
+                    onChange={(e) => updateItem(idx, 'name', e.target.value)}
+                    placeholder='Descripción'
+                    className='h-8 rounded-lg border border-secondary-200 px-2 text-xs text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
+                  />
+                  <input
+                    type='number'
+                    value={item.quantity}
+                    onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
+                    min='1'
+                    className='h-8 rounded-lg border border-secondary-200 px-2 text-xs text-text-main text-center focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
+                  />
+                  <CurrencyInput
+                    value={item.totalPrice}
+                    onChange={(val) => updateItem(idx, 'totalPrice', val)}
+                    placeholder='0'
+                    className='h-8 w-full rounded-lg border border-secondary-200 px-2 text-xs text-text-main text-right placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all'
+                  />
+                  <button
+                    type='button'
+                    onClick={() => removeItem(idx)}
+                    className='w-6 h-6 flex items-center justify-center rounded-md hover:bg-danger/10 text-danger/50 hover:text-danger transition-colors'
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
 
               <div className='flex justify-between items-center pt-1 border-t border-secondary-100'>
                 <span className='text-xs text-text-muted'>Total ítems</span>
@@ -550,7 +532,7 @@ export default function Registros() {
         items: (parsed.items ?? []).map((it) => ({
           name: it.name,
           quantity: String(it.quantity),
-          unitPrice: String(Math.round(it.unitPrice)),
+          totalPrice: String(Math.round(it.totalPrice ?? it.unitPrice * it.quantity)),
         })),
       }
       setFormInitial(scannedInitial)
@@ -705,8 +687,7 @@ export default function Registros() {
         items: (editingRecord.items ?? []).map((i) => ({
           name: i.name,
           quantity: String(i.quantity),
-          unitPrice: String(Math.round(i.unitPrice)),
-          totalPrice: String(i.totalPrice),
+          totalPrice: String(Math.round(i.totalPrice)),
         })),
       }
     : EMPTY_FORM
