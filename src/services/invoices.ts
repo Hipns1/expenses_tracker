@@ -15,11 +15,13 @@ export const invoiceService = {
         const formData = new FormData()
         formData.append('file', file)
 
-        return await apiConfig.post(endpoints.invoices.scan, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        }) as unknown as Invoice
+        const res = await fetch('https://n8n.jdpf-develop.online/webhook/invoice-scan', {
+            method: 'POST',
+            body: formData,
+        })
+
+        if (!res.ok) throw new Error('Error al escanear la factura')
+        return await res.json() as Invoice
     },
 
 }
