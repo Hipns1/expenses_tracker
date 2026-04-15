@@ -14,6 +14,9 @@ export const creditCardsService = {
     async create(name: string, lastFourDigits: string): Promise<CreditCard> {
         return await apiConfig.post(endpoints.creditCards.create, { name, lastFourDigits }) as unknown as CreditCard
     },
+    async update(id: number, name: string, lastFourDigits: string): Promise<CreditCard> {
+        return await apiConfig.put(`${endpoints.creditCards.getAll}/${id}`, { name, lastFourDigits }) as unknown as CreditCard
+    },
     async delete(id: number): Promise<void> {
         await apiConfig.delete(`${endpoints.creditCards.delete}/${id}`)
     }

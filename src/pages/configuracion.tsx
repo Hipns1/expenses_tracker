@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { categoriesService, type Category } from '@/services/categories'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { creditCardsService, type CreditCard } from '@/services/creditCards'
 import { toast } from 'react-toastify'
-import { Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X } from 'lucide-react'
+import { Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X, CheckCircle, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 /* ── Tipos de modal ── */
-type ModalType = 'category' | 'creditCard' | 'year' | null
+type ModalType = 'category' | 'creditCard' | 'year' | 'editCategory' | 'editCreditCard' | null
 
 /* ── Modal simple inline ── */
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -84,21 +84,80 @@ function Section({
   )
 }
 
-/* ── Fila de ítem con delete ── */
-function ItemRow({ label, sublabel, onDelete }: { label: string; sublabel?: string; onDelete: () => void }) {
+/* ── Fila de ítem con edit + delete de doble confirmación ── */
+function ItemRow({
+  label,
+  sublabel,
+  onEdit,
+  onDelete,
+  deleteWarning,
+}: {
+  label: string
+  sublabel?: string
+  onEdit?: () => void
+  onDelete?: () => void
+  deleteWarning?: string
+}) {
+  const [pending, setPending] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleDeleteClick = () => {
+    if (!pending) {
+      setPending(true)
+      timerRef.current = setTimeout(() => setPending(false), 3000)
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      setPending(false)
+      onDelete?.()
+    }
+  }
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+
   return (
     <li className='flex items-center justify-between py-2 px-3 rounded-xl hover:bg-secondary-50 group transition-colors'>
-      <div>
-        <span className='text-sm font-medium text-text-main'>{label}</span>
-        {sublabel && <span className='text-xs text-text-muted ml-2'>{sublabel}</span>}
+      <div className='flex flex-col min-w-0'>
+        <div>
+          <span className='text-sm font-medium text-text-main'>{label}</span>
+          {sublabel && <span className='text-xs text-text-muted ml-2'>{sublabel}</span>}
+        </div>
+        <AnimatePresence>
+          {pending && (
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className='text-[11px] text-danger font-medium mt-0.5'
+            >
+              {deleteWarning}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
-      <button
-        onClick={onDelete}
-        className='opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-danger/10 text-danger transition-all'
-        title='Eliminar'
-      >
-        <Trash2 size={14} />
-      </button>
+      <div className='ml-3 flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all'>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
+            title='Editar'
+          >
+            <Pencil size={13} />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={handleDeleteClick}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+              pending
+                ? 'opacity-100 bg-danger text-white hover:bg-danger/90'
+                : 'hover:bg-danger/10 text-danger'
+            }`}
+            title={pending ? 'Confirmar eliminación' : 'Eliminar'}
+          >
+            {pending ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+          </button>
+        )}
+      </div>
     </li>
   )
 }
@@ -143,11 +202,18 @@ export default function Configuracion() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
 
-  // Form fields
+  // Form fields - crear
   const [categoryName, setCategoryName] = useState('')
   const [cardName, setCardName] = useState('')
   const [cardDigits, setCardDigits] = useState('')
   const [yearValue, setYearValue] = useState(String(new Date().getFullYear()))
+
+  // Form fields - editar
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [editCategoryName, setEditCategoryName] = useState('')
+  const [editingCard, setEditingCard] = useState<CreditCard | null>(null)
+  const [editCardName, setEditCardName] = useState('')
+  const [editCardDigits, setEditCardDigits] = useState('')
 
   /* ── Carga inicial ── */
   useEffect(() => {
@@ -162,6 +228,24 @@ export default function Configuracion() {
     setCardName('')
     setCardDigits('')
     setYearValue(String(new Date().getFullYear()))
+    setEditingCategory(null)
+    setEditCategoryName('')
+    setEditingCard(null)
+    setEditCardName('')
+    setEditCardDigits('')
+  }
+
+  const openEditCategory = (c: Category) => {
+    setEditingCategory(c)
+    setEditCategoryName(c.name)
+    setOpenModal('editCategory')
+  }
+
+  const openEditCard = (c: CreditCard) => {
+    setEditingCard(c)
+    setEditCardName(c.name)
+    setEditCardDigits(c.lastFourDigits)
+    setOpenModal('editCreditCard')
   }
 
   /* ── Handlers ── */
@@ -180,13 +264,29 @@ export default function Configuracion() {
     }
   }
 
+  const handleEditCategory = async () => {
+    if (!editingCategory || !editCategoryName.trim()) return
+    setIsSubmitting(true)
+    try {
+      const updated = await categoriesService.update(editingCategory.id, editCategoryName.trim())
+      setCategories((prev) => prev.map((c) => c.id === updated.id ? { ...c, name: updated.name } : c))
+      toast.success('Categoría actualizada')
+      closeModal()
+    } catch {
+      toast.error('Error al actualizar categoría')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleDeleteCategory = async (id: number) => {
     try {
       await categoriesService.delete(id)
       setCategories((prev) => prev.filter((c) => c.id !== id))
       toast.success('Categoría eliminada')
-    } catch {
-      toast.error('Error al eliminar categoría')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Error al eliminar categoría'
+      toast.error(msg)
     }
   }
 
@@ -205,13 +305,29 @@ export default function Configuracion() {
     }
   }
 
+  const handleEditCard = async () => {
+    if (!editingCard || !editCardName.trim() || editCardDigits.length !== 4) return
+    setIsSubmitting(true)
+    try {
+      const updated = await creditCardsService.update(editingCard.id, editCardName.trim(), editCardDigits)
+      setCreditCards((prev) => prev.map((c) => c.id === updated.id ? updated : c))
+      toast.success('Método de pago actualizado')
+      closeModal()
+    } catch {
+      toast.error('Error al actualizar método de pago')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleDeleteCard = async (id: number) => {
     try {
       await creditCardsService.delete(id)
       setCreditCards((prev) => prev.filter((c) => c.id !== id))
-      toast.success('Tarjeta eliminada')
-    } catch {
-      toast.error('Error al eliminar tarjeta')
+      toast.success('Método de pago eliminado')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Error al eliminar método de pago'
+      toast.error(msg)
     }
   }
 
@@ -232,15 +348,6 @@ export default function Configuracion() {
     }
   }
 
-  const handleDeleteYear = async (id: number) => {
-    try {
-      await fiscalYearsService.delete(id)
-      setFiscalYears((prev) => prev.filter((f) => f.id !== id))
-      toast.success('Año eliminado')
-    } catch {
-      toast.error('Error al eliminar año')
-    }
-  }
 
   return (
     <BaseLayout titleHeader='Configuración'>
@@ -259,7 +366,13 @@ export default function Configuracion() {
           emptyText='Sin categorías'
         >
           {categories.map((c) => (
-            <ItemRow key={c.id} label={c.name} onDelete={() => handleDeleteCategory(c.id)} />
+            <ItemRow
+              key={c.id}
+              label={c.name}
+              onEdit={!c.isSystem ? () => openEditCategory(c) : undefined}
+              onDelete={!c.isSystem ? () => handleDeleteCategory(c.id) : undefined}
+              deleteWarning='¿Confirmar? Los registros con esta categoría la perderán.'
+            />
           ))}
         </Section>
 
@@ -277,7 +390,9 @@ export default function Configuracion() {
               key={c.id}
               label={c.name}
               sublabel={`···· ${c.lastFourDigits}`}
+              onEdit={() => openEditCard(c)}
               onDelete={() => handleDeleteCard(c.id)}
+              deleteWarning='¿Confirmar? Los registros con este método de pago lo perderán.'
             />
           ))}
         </Section>
@@ -292,7 +407,7 @@ export default function Configuracion() {
           emptyText='Sin años'
         >
           {fiscalYears.map((f) => (
-            <ItemRow key={f.id} label={String(f.year)} onDelete={() => handleDeleteYear(f.id)} />
+            <ItemRow key={f.id} label={String(f.year)} />
           ))}
         </Section>
       </div>
@@ -362,6 +477,53 @@ export default function Configuracion() {
                 className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
               >
                 {isSubmitting ? 'Guardando...' : 'Añadir año'}
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {openModal === 'editCategory' && editingCategory && (
+          <Modal title='Editar categoría' onClose={closeModal}>
+            <div className='flex flex-col gap-4'>
+              <ModalInput
+                label='Nombre'
+                value={editCategoryName}
+                onChange={setEditCategoryName}
+                placeholder='Ej: Alimentación'
+              />
+              <button
+                onClick={handleEditCategory}
+                disabled={isSubmitting || !editCategoryName.trim()}
+                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+              >
+                {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {openModal === 'editCreditCard' && editingCard && (
+          <Modal title='Editar método de pago' onClose={closeModal}>
+            <div className='flex flex-col gap-4'>
+              <ModalInput
+                label='Nombre'
+                value={editCardName}
+                onChange={setEditCardName}
+                placeholder='Ej: Visa Oro'
+              />
+              <ModalInput
+                label='Últimos 4 dígitos'
+                value={editCardDigits}
+                onChange={(v) => setEditCardDigits(v.replace(/\D/g, '').slice(0, 4))}
+                placeholder='0000'
+                maxLength={4}
+              />
+              <button
+                onClick={handleEditCard}
+                disabled={isSubmitting || !editCardName.trim() || editCardDigits.length !== 4}
+                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+              >
+                {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </Modal>

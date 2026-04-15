@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useResetStoreOnLocationChange } from '@/hooks/use-reset-store'
 import { useHomeStore } from '@/context/home-store'
@@ -14,6 +14,7 @@ import { creditCardsService } from '@/services/creditCards'
 export function Providers() {
   const { setIsLoginLoading, isLoginLoading, resetStore: resetHomeStore, showOnboarding, setShowOnboarding } = useHomeStore()
   const user = useBoundStore((s) => s.user)
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false)
 
   useResetStoreOnLocationChange(resetHomeStore)
   useRefreshToken()
@@ -23,10 +24,11 @@ export function Providers() {
     return () => clearTimeout(timer)
   }, [isLoginLoading])
 
-  // Al terminar el loading inicial, verificar si el usuario necesita onboarding
+  // Al terminar el loading inicial, verificar onboarding antes de mostrar la app
   useEffect(() => {
     if (isLoginLoading || !user) return
 
+    setIsCheckingOnboarding(true)
     const checkOnboarding = async () => {
       try {
         const [years, categories, cards] = await Promise.all([
@@ -39,13 +41,15 @@ export function Providers() {
         setShowOnboarding(needsOnboarding)
       } catch {
         // Si falla la verificación, no bloquear al usuario
+      } finally {
+        setIsCheckingOnboarding(false)
       }
     }
 
     checkOnboarding()
   }, [isLoginLoading, user])
 
-  if (isLoginLoading) {
+  if (isLoginLoading || isCheckingOnboarding) {
     return <Loading />
   }
 

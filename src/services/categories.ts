@@ -14,6 +14,9 @@ export const categoriesService = {
     async create(name: string): Promise<Category> {
         return await apiConfig.post(endpoints.categories.create, { name }) as unknown as Category
     },
+    async update(id: number, name: string): Promise<Category> {
+        return await apiConfig.put(`${endpoints.categories.getAll}/${id}`, { name }) as unknown as Category
+    },
     async delete(id: number): Promise<void> {
         await apiConfig.delete(`${endpoints.categories.delete}/${id}`)
     }
