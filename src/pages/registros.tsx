@@ -698,7 +698,11 @@ export default function Registros() {
         description: editingRecord.description ?? '',
         categoryId: editingRecord.category ? String(editingRecord.category.id) : '',
         creditCardId: editingRecord.creditCard ? String(editingRecord.creditCard.id) : '',
-        items: [],
+        items: (editingRecord.items ?? []).map((i) => ({
+          name: i.name,
+          quantity: String(i.quantity),
+          unitPrice: String(Math.round(i.unitPrice)),
+        })),
       }
     : EMPTY_FORM
 

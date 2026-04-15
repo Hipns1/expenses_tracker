@@ -14,6 +14,14 @@ export interface RecordCreditCard {
     lastFourDigits: string
 }
 
+export interface RecordItem {
+    id: number
+    name: string
+    quantity: number
+    unitPrice: number
+    totalPrice: number
+}
+
 export interface Record {
     id: number
     type: RecordType
@@ -23,6 +31,7 @@ export interface Record {
     fiscalYearId: number
     category?: Category | null
     creditCard?: RecordCreditCard | null
+    items: RecordItem[]
 }
 
 export interface CreateRecordPayload {
