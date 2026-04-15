@@ -591,6 +591,7 @@ export default function Registros() {
             quantity: qty,
             unitPrice: price,
             totalPrice: Math.max(0, Math.round(qty * price) - disc),
+            discount: disc,
           }
         }) : undefined,
       }
@@ -733,6 +734,7 @@ export default function Registros() {
           name: i.name,
           quantity: String(i.quantity),
           unitPrice: String(Math.round(i.unitPrice)),
+          discount: i.discount > 0 ? String(i.discount) : undefined,
         })),
       }
     : EMPTY_FORM

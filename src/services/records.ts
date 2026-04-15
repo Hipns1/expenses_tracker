@@ -20,6 +20,7 @@ export interface RecordItem {
     quantity: number
     unitPrice: number
     totalPrice: number
+    discount: number
 }
 
 export interface Record {
@@ -39,6 +40,7 @@ export interface CreateRecordItemPayload {
     quantity: number
     unitPrice: number
     totalPrice: number
+    discount: number
 }
 
 export interface CreateRecordPayload {
