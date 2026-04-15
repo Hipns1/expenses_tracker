@@ -1,6 +1,7 @@
 import { apiConfig } from './api-config'
 import { Invoice } from '@/types/invoice'
 import endpoints from './endpoints.json'
+import { N8N_INVOICE_SCAN_URL } from '@/utils/consts/auth'
 
 export const invoiceService = {
     async getAll(): Promise<Invoice[]> {
@@ -15,7 +16,7 @@ export const invoiceService = {
         const formData = new FormData()
         formData.append('file', file)
 
-        const res = await fetch(import.meta.env.VITE_N8N_INVOICE_SCAN_URL, {
+        const res = await fetch(N8N_INVOICE_SCAN_URL!, {
             method: 'POST',
             body: formData,
         })
