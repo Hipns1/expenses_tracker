@@ -22,7 +22,19 @@ export const invoiceService = {
         })
 
         if (!res.ok) throw new Error('Error al escanear la factura')
-        return await res.json() as Invoice
+        const data = await res.json()
+
+        return {
+            description: data.comercio || data.metodo_pago || '',
+            amount: data.valor_factura ?? 0,
+            date: new Date().toISOString(),
+            items: (data.productos ?? []).map((p: { marca?: string; item: string; cantidad: number; precio_unitario: number }) => ({
+                name: `${p.marca ? p.marca + ' - ' : ''}${p.item}`,
+                quantity: p.cantidad,
+                unitPrice: p.precio_unitario,
+                totalPrice: Math.round(p.cantidad * p.precio_unitario),
+            })),
+        }
     },
 
 }
