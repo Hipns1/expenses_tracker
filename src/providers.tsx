@@ -15,6 +15,7 @@ export function Providers() {
   const { setIsLoginLoading, isLoginLoading, resetStore: resetHomeStore, showOnboarding, setShowOnboarding } = useHomeStore()
   const user = useBoundStore((s) => s.user)
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState<'year' | 'category' | 'card'>('year')
 
   useResetStoreOnLocationChange(resetHomeStore)
   useRefreshToken()
@@ -38,7 +39,12 @@ export function Providers() {
         ])
         const needsOnboarding =
           years.length === 0 || categories.length === 0 || cards.length === 0
-        setShowOnboarding(needsOnboarding)
+        if (needsOnboarding) {
+          if (years.length === 0) setOnboardingStep('year')
+          else if (categories.length === 0) setOnboardingStep('category')
+          else setOnboardingStep('card')
+          setShowOnboarding(true)
+        }
       } catch {
         // Si falla la verificación, no bloquear al usuario
       } finally {
@@ -58,7 +64,7 @@ export function Providers() {
       <Outlet />
       <ToastContainer />
       {showOnboarding && (
-        <OnboardingModal onComplete={() => setShowOnboarding(false)} />
+        <OnboardingModal initialStep={onboardingStep} onComplete={() => setShowOnboarding(false)} />
       )}
     </>
   )

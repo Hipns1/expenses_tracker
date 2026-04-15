@@ -13,6 +13,7 @@ import { toast } from 'react-toastify'
 
 interface OnboardingModalProps {
   onComplete: () => void
+  initialStep?: 'year' | 'category' | 'card'
 }
 
 type StepId = 'year' | 'category' | 'card'
@@ -53,8 +54,8 @@ const STEPS: StepMeta[] = [
   },
 ]
 
-export function OnboardingModal({ onComplete }: OnboardingModalProps) {
-  const [currentStep, setCurrentStep] = useState(0)
+export function OnboardingModal({ onComplete, initialStep = 'year' }: OnboardingModalProps) {
+  const [currentStep, setCurrentStep] = useState(STEPS.findIndex((s) => s.id === initialStep))
   const [completed, setCompleted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
