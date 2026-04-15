@@ -198,7 +198,7 @@ function RecordForm({
       const qty = parseFloat(item.quantity) || 0
       const price = parseInt(item.unitPrice.replace(/\D/g, '')) || 0
       const disc = parseInt(item.discount || '0') || 0
-      return sum + Math.max(0, qty * price - disc)
+      return sum + Math.round(Math.max(0, qty * price - disc))
     }, 0)
   }, [form.items])
 
