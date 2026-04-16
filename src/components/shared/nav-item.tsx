@@ -3,7 +3,7 @@ import { RouteProps } from '@/types/routes'
 import { cn } from '@/utils/utils'
 import {
   LayoutDashboard, BookOpen, BarChart2, PiggyBank, CreditCard,
-  FileText, User, Settings, type LucideIcon
+  FileText, User, Settings, HandCoins, type LucideIcon
 } from 'lucide-react'
 
 const LUCIDE_ICONS: Record<string, LucideIcon> = {
@@ -15,6 +15,7 @@ const LUCIDE_ICONS: Record<string, LucideIcon> = {
   FileText,
   User,
   Settings,
+  HandCoins,
 }
 
 interface NavItemProps {

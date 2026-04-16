@@ -25,7 +25,8 @@ export interface Loan {
 export const loansService = {
     async getAll(fiscalYearId?: number): Promise<Loan[]> {
         const url = fiscalYearId ? `/Loans?fiscalYearId=${fiscalYearId}` : '/Loans'
-        return await apiConfig.get(url) as unknown as Loan[]
+        const data = await apiConfig.get(url)
+        return (Array.isArray(data) ? data : []) as Loan[]
     },
     async create(data: {
         personName: string
