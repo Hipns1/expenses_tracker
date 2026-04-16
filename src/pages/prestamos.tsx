@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   HandCoins, Plus, Trash2, ChevronDown, ChevronUp,
@@ -8,6 +8,53 @@ import { BaseLayout } from '@/components/shared/base-layout'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { loansService, type Loan } from '@/services/loans'
 import { toast } from 'react-toastify'
+
+/* ── Input de moneda (mismo patrón que registros) ── */
+function CurrencyInput({ value, onChange, placeholder = '0', className }: {
+  value: string; onChange: (val: string) => void; placeholder?: string; className?: string
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const numericOnly = value.replace(/\D/g, '')
+  const formatted = numericOnly ? new Intl.NumberFormat('es-CO').format(parseInt(numericOnly)) : ''
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const cursorPos = input.selectionStart ?? 0
+    const digitsBeforeCursor = input.value.slice(0, cursorPos).replace(/\D/g, '').length
+    const raw = e.target.value.replace(/\D/g, '')
+    onChange(raw)
+    requestAnimationFrame(() => {
+      if (!inputRef.current) return
+      const newFormatted = raw ? new Intl.NumberFormat('es-CO').format(parseInt(raw)) : ''
+      let digitCount = 0
+      let newPos = newFormatted.length
+      for (let i = 0; i < newFormatted.length; i++) {
+        if (/\d/.test(newFormatted[i])) {
+          digitCount++
+          if (digitCount === digitsBeforeCursor) { newPos = i + 1; break }
+        }
+      }
+      if (digitsBeforeCursor === 0) newPos = 0
+      inputRef.current.setSelectionRange(newPos, newPos)
+    })
+  }, [onChange])
+
+  return (
+    <div className='relative flex items-center w-full'>
+      <span className='absolute left-2.5 text-text-muted pointer-events-none select-none text-xs z-10'>$</span>
+      <input
+        ref={inputRef}
+        type='text'
+        inputMode='numeric'
+        value={formatted}
+        placeholder={placeholder}
+        style={{ paddingLeft: '1.625rem' }}
+        className={`w-full ${className ?? ''}`}
+        onChange={handleChange}
+      />
+    </div>
+  )
+}
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -430,12 +477,11 @@ export default function Prestamos() {
               <div className='flex gap-3'>
                 <div className='flex flex-col gap-1.5 flex-1'>
                   <label className='text-sm font-medium text-text-main'>Monto</label>
-                  <input
-                    type='number'
+                  <CurrencyInput
                     value={newAmount}
-                    onChange={(e) => setNewAmount(e.target.value)}
+                    onChange={setNewAmount}
                     placeholder='0'
-                    className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                    className='h-10 rounded-xl border border-secondary-200 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
                   />
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -486,13 +532,11 @@ export default function Prestamos() {
               </div>
               <div className='flex flex-col gap-1.5'>
                 <label className='text-sm font-medium text-text-main'>Monto del pago</label>
-                <input
-                  type='number'
+                <CurrencyInput
                   value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
+                  onChange={setPayAmount}
                   placeholder={`Máx. ${fmt(payingLoan.remaining)}`}
-                  className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
-                  autoFocus
+                  className='h-10 rounded-xl border border-secondary-200 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
                 />
               </div>
               <div className='flex flex-col gap-1.5'>

@@ -9,7 +9,7 @@ import { toast } from 'react-toastify'
 import {
   Plus, Trash2, Pencil, X, TrendingUp, TrendingDown, Wallet,
   ChevronDown, CalendarDays, Tag, ArrowUpCircle, ArrowDownCircle,
-  ScanLine, Edit3, Loader2, CheckCircle
+  ScanLine, Edit3, Loader2, CheckCircle, HandCoins
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -654,6 +654,7 @@ export default function Registros() {
   /* ── Fila de registro ── */
   const RecordRow = ({ record }: { record: FinanceRecord }) => {
     const income = isIncome(record.type)
+    const isLoan = record.isLoan === true
     return (
       <motion.div
         layout
@@ -662,8 +663,10 @@ export default function Registros() {
         exit={{ opacity: 0, y: -6 }}
         className='flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-secondary-50 group transition-colors'
       >
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${income ? 'bg-success/10' : 'bg-danger/10'}`}>
-          {income
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isLoan ? 'bg-amber-100' : income ? 'bg-success/10' : 'bg-danger/10'}`}>
+          {isLoan
+            ? <HandCoins size={18} className='text-amber-600' />
+            : income
             ? <ArrowUpCircle size={18} className='text-success' />
             : <ArrowDownCircle size={18} className='text-danger' />
           }
@@ -688,34 +691,36 @@ export default function Registros() {
           </div>
           <div className='flex items-center gap-2 mt-0.5'>
             <span className='text-xs text-text-muted'>{MONTHS[record.month - 1]}</span>
-            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${income ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-              {RECORD_TYPE_LABELS[record.type]}
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${isLoan ? 'bg-amber-100 text-amber-700' : income ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+              {isLoan ? 'Préstamo' : RECORD_TYPE_LABELS[record.type]}
             </span>
           </div>
         </div>
 
-        <span className={`text-sm font-bold flex-shrink-0 ${income ? 'text-success' : 'text-danger'}`}>
-          {income ? '+' : '-'}{formatCurrency(record.amount)}
+        <span className={`text-sm font-bold flex-shrink-0 ${isLoan ? 'text-amber-600' : income ? 'text-success' : 'text-danger'}`}>
+          -{formatCurrency(record.amount)}
         </span>
 
-        <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-          <button
-            onClick={() => openEdit(record)}
-            className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => handleDelete(record.id)}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-              pendingDeleteId === record.id
-                ? 'bg-danger text-white'
-                : 'hover:bg-danger/10 text-danger'
-            }`}
-          >
-            {pendingDeleteId === record.id ? <CheckCircle size={13} /> : <Trash2 size={13} />}
-          </button>
-        </div>
+        {!isLoan && (
+          <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+            <button
+              onClick={() => openEdit(record)}
+              className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              onClick={() => handleDelete(record.id)}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+                pendingDeleteId === record.id
+                  ? 'bg-danger text-white'
+                  : 'hover:bg-danger/10 text-danger'
+              }`}
+            >
+              {pendingDeleteId === record.id ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+            </button>
+          </div>
+        )}
       </motion.div>
     )
   }
@@ -909,7 +914,7 @@ export default function Registros() {
                     </div>
                     <div className='px-3 py-1'>
                       <AnimatePresence>
-                        {recs.map((r) => <RecordRow key={r.id} record={r} />)}
+                        {recs.map((r) => <RecordRow key={r.isLoan ? `loan_${r.id}` : r.id} record={r} />)}
                       </AnimatePresence>
                     </div>
                   </div>
@@ -918,7 +923,7 @@ export default function Registros() {
             ) : (
               <div className='px-3 py-2'>
                 <AnimatePresence>
-                  {filtered.map((r) => <RecordRow key={r.id} record={r} />)}
+                  {filtered.map((r) => <RecordRow key={r.isLoan ? `loan_${r.id}` : r.id} record={r} />)}
                 </AnimatePresence>
               </div>
             )}
