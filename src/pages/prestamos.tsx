@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   HandCoins, Plus, Trash2, ChevronDown, ChevronUp,
@@ -272,6 +272,7 @@ export default function Prestamos() {
   const [selectedYearId, setSelectedYearId] = useState<number | null>(null)
   const [loans, setLoans] = useState<Loan[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
 
   // Modal nuevo préstamo
   const [showNewLoan, setShowNewLoan] = useState(false)
@@ -298,20 +299,27 @@ export default function Prestamos() {
   useEffect(() => {
     if (!selectedYearId) { setLoading(false); return }
     setLoading(true)
+    setSelectedMonth(null)
     loansService.getAll(selectedYearId)
       .then(setLoans)
       .catch(() => toast.error('Error al cargar préstamos'))
       .finally(() => setLoading(false))
   }, [selectedYearId])
 
+  /* ── Filtrado por mes ── */
+  const filteredLoans = useMemo(() =>
+    selectedMonth === null ? loans : loans.filter((l) => l.month === selectedMonth),
+    [loans, selectedMonth]
+  )
+
   /* ── Resumen ── */
-  const totalLoaned  = loans.reduce((s, l) => s + l.amount, 0)
-  const totalPaid    = loans.reduce((s, l) => s + l.totalPaid, 0)
-  const totalPending = loans.reduce((s, l) => s + l.remaining, 0)
+  const totalLoaned  = filteredLoans.reduce((s, l) => s + l.amount, 0)
+  const totalPaid    = filteredLoans.reduce((s, l) => s + l.totalPaid, 0)
+  const totalPending = filteredLoans.reduce((s, l) => s + l.remaining, 0)
 
   /* ── Orden: pendientes/parciales primero, pagados al final ── */
-  const active = loans.filter((l) => l.status !== 'Paid')
-  const paid   = loans.filter((l) => l.status === 'Paid')
+  const active = filteredLoans.filter((l) => l.status !== 'Paid')
+  const paid   = filteredLoans.filter((l) => l.status === 'Paid')
 
   /* ── Handlers ── */
   const closeNewLoan = () => {
@@ -410,8 +418,35 @@ export default function Prestamos() {
         </button>
       </div>
 
+      {/* ── Filtro por mes ── */}
+      <div className='flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mb-5'>
+        <button
+          onClick={() => setSelectedMonth(null)}
+          className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
+            selectedMonth === null
+              ? 'bg-text-main text-white'
+              : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
+          }`}
+        >
+          Todos
+        </button>
+        {MONTHS.map((m, i) => (
+          <button
+            key={i}
+            onClick={() => setSelectedMonth(i + 1)}
+            className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
+              selectedMonth === i + 1
+                ? 'bg-text-main text-white'
+                : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
+            }`}
+          >
+            {m.slice(0, 3)}
+          </button>
+        ))}
+      </div>
+
       {/* ── Tarjetas de resumen ── */}
-      {loans.length > 0 && (
+      {filteredLoans.length > 0 && (
         <div className='grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6'>
           <SummaryCard label='Total prestado'  value={fmt(totalLoaned)}  icon={HandCoins}         color='bg-primary/10 text-primary' />
           <SummaryCard label='Total cobrado'   value={fmt(totalPaid)}    icon={CheckCircle}       color='bg-green-100 text-green-600' />
@@ -424,10 +459,14 @@ export default function Prestamos() {
         <div className='flex justify-center py-12'>
           <div className='w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin' />
         </div>
-      ) : loans.length === 0 ? (
+      ) : filteredLoans.length === 0 ? (
         <div className='bg-white rounded-2xl border border-secondary-100 p-12 text-center'>
           <HandCoins size={36} className='text-secondary-300 mx-auto mb-3' />
-          <p className='text-text-muted text-sm'>No hay préstamos registrados para este año.</p>
+          <p className='text-text-muted text-sm'>
+            {selectedMonth !== null
+              ? `Sin préstamos en ${MONTHS[selectedMonth - 1]}.`
+              : 'No hay préstamos registrados para este año.'}
+          </p>
         </div>
       ) : (
         <div className='flex flex-col gap-3 max-w-2xl'>
