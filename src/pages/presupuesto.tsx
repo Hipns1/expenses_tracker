@@ -138,7 +138,7 @@ function BudgetCard({
               </span>
             )}
           </div>
-          <p className='text-xs text-text-muted mt-0.5'>Límite mensual: {fmt(budget.monthlyLimit)}</p>
+          <p className='text-xs text-text-muted mt-0.5'>Límite mensual (todos los meses): {fmt(budget.monthlyLimit)}</p>
         </div>
         <div className='flex items-center gap-1 flex-shrink-0'>
           <button
@@ -315,7 +315,7 @@ export default function Presupuesto() {
   return (
     <BaseLayout titleHeader='Presupuesto'>
       <p className='text-sm text-text-muted -mt-2 mb-4'>
-        Límites mensuales por categoría. El gasto se calcula automáticamente de tus registros.
+        Define un límite mensual por categoría para todo el año. Selecciona el mes para ver cuánto llevás gastado ese mes vs tu límite.
       </p>
 
       {/* ── Selectores año + botón ── */}
@@ -340,7 +340,10 @@ export default function Presupuesto() {
         )}
       </div>
 
-      {/* ── Filtro por mes ── */}
+      {/* ── Selector de mes (solo para ver el gasto) ── */}
+      <div className='mb-1'>
+        <p className='text-xs font-medium text-text-muted mb-2'>Ver gasto del mes:</p>
+      </div>
       <div className='flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mb-5'>
         {MONTHS.map((m, i) => (
           <button
@@ -361,7 +364,7 @@ export default function Presupuesto() {
       {budgets.length > 0 && (
         <div className='bg-white rounded-2xl border border-secondary-100 p-5 mb-5'>
           <p className='text-xs text-text-muted font-medium mb-2'>
-            Resumen de {MONTHS[selectedMonth - 1]}
+            Gasto real en {MONTHS[selectedMonth - 1]} vs límite mensual
           </p>
           <div className='flex items-end justify-between gap-2 mb-2'>
             <span className='text-2xl font-bold text-text-main'>{fmt(totalSpent)}</span>

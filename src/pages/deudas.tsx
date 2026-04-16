@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Landmark, Plus, Trash2, ChevronDown, ChevronUp,
   CheckCircle, CircleDollarSign, Clock, X, TrendingDown
 } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
-import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { debtsService, type Debt } from '@/services/debts'
 import { toast } from 'react-toastify'
 
@@ -152,10 +151,9 @@ function DebtCard({
                 {cfg.label}
               </span>
             </div>
-            <p className='text-xs text-text-muted mt-0.5'>
-              {MONTHS[debt.month - 1]}
-              {debt.description && <span> · {debt.description}</span>}
-            </p>
+            {debt.description && (
+              <p className='text-xs text-text-muted mt-0.5'>{debt.description}</p>
+            )}
           </div>
           <div className='flex-shrink-0 text-right'>
             <p className='text-base font-bold text-text-main'>{fmt(debt.amount)}</p>
@@ -241,10 +239,10 @@ function DebtCard({
                 <div key={p.id} className='flex items-center justify-between gap-3 group'>
                   <div>
                     <span className='text-sm font-medium text-text-main'>{fmt(p.amount)}</span>
-                    {p.note && <span className='text-xs text-text-muted ml-2'>{p.note}</span>}
-                    <p className='text-xs text-text-muted'>
-                      {new Date(p.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </p>
+                    <span className='text-xs text-text-muted ml-2'>
+                      {MONTHS[p.month - 1]} {p.year}
+                    </span>
+                    {p.note && <span className='text-xs text-text-muted ml-1'>· {p.note}</span>}
                   </div>
                   <button
                     onClick={() => onDeletePayment(debt, p.id)}
@@ -265,61 +263,42 @@ function DebtCard({
 
 /* ── Página principal ── */
 export default function Deudas() {
-  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([])
-  const [selectedYearId, setSelectedYearId] = useState<number | null>(null)
   const [debts, setDebts] = useState<Debt[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
 
   const [showNewDebt, setShowNewDebt] = useState(false)
   const [newCreditorName, setNewCreditorName] = useState('')
   const [newAmount, setNewAmount] = useState('')
-  const [newMonth, setNewMonth] = useState(String(new Date().getMonth() + 1))
   const [newDescription, setNewDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const [payingDebt, setPayingDebt] = useState<Debt | null>(null)
   const [payAmount, setPayAmount] = useState('')
+  const [payMonth, setPayMonth] = useState(String(new Date().getMonth() + 1))
+  const [payYear, setPayYear] = useState(String(new Date().getFullYear()))
   const [payNote, setPayNote] = useState('')
 
   useEffect(() => {
-    fiscalYearsService.getAll().then((years) => {
-      const sorted = [...years].sort((a, b) => b.year - a.year)
-      setFiscalYears(sorted)
-      if (sorted.length > 0) setSelectedYearId(sorted[0].id)
-    }).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (!selectedYearId) { setLoading(false); return }
-    setLoading(true)
-    setSelectedMonth(null)
-    debtsService.getAll(selectedYearId)
+    debtsService.getAll()
       .then(setDebts)
       .catch(() => toast.error('Error al cargar deudas'))
       .finally(() => setLoading(false))
-  }, [selectedYearId])
+  }, [])
 
-  const filteredDebts = useMemo(() =>
-    selectedMonth === null ? debts : debts.filter((d) => d.month === selectedMonth),
-    [debts, selectedMonth]
-  )
+  const totalDebt    = debts.reduce((s, d) => s + d.amount, 0)
+  const totalPaid    = debts.reduce((s, d) => s + d.totalPaid, 0)
+  const totalPending = debts.reduce((s, d) => s + d.remaining, 0)
 
-  const totalDebt    = filteredDebts.reduce((s, d) => s + d.amount, 0)
-  const totalPaid    = filteredDebts.reduce((s, d) => s + d.totalPaid, 0)
-  const totalPending = filteredDebts.reduce((s, d) => s + d.remaining, 0)
-
-  const active = filteredDebts.filter((d) => d.status !== 'Paid')
-  const paid   = filteredDebts.filter((d) => d.status === 'Paid')
+  const active = debts.filter((d) => d.status !== 'Paid')
+  const paid   = debts.filter((d) => d.status === 'Paid')
 
   const closeNewDebt = () => {
     setShowNewDebt(false)
     setNewCreditorName(''); setNewAmount(''); setNewDescription('')
-    setNewMonth(String(new Date().getMonth() + 1))
   }
 
   const handleCreateDebt = async () => {
-    if (!newCreditorName.trim() || !newAmount || !selectedYearId) return
+    if (!newCreditorName.trim() || !newAmount) return
     const amount = parseFloat(newAmount)
     if (isNaN(amount) || amount <= 0) { toast.error('Monto inválido'); return }
     setSubmitting(true)
@@ -327,8 +306,6 @@ export default function Deudas() {
       const created = await debtsService.create({
         creditorName: newCreditorName.trim(),
         amount,
-        month: parseInt(newMonth),
-        fiscalYearId: selectedYearId,
         description: newDescription.trim() || undefined,
       })
       setDebts((prev) => [created, ...prev])
@@ -341,15 +318,22 @@ export default function Deudas() {
     }
   }
 
-  const closePayment = () => { setPayingDebt(null); setPayAmount(''); setPayNote('') }
+  const closePayment = () => {
+    setPayingDebt(null); setPayAmount(''); setPayNote('')
+    setPayMonth(String(new Date().getMonth() + 1))
+    setPayYear(String(new Date().getFullYear()))
+  }
 
   const handleAddPayment = async () => {
     if (!payingDebt || !payAmount) return
     const amount = parseFloat(payAmount)
+    const month  = parseInt(payMonth)
+    const year   = parseInt(payYear)
     if (isNaN(amount) || amount <= 0) { toast.error('Monto inválido'); return }
+    if (isNaN(year) || year < 2000)   { toast.error('Año inválido'); return }
     setSubmitting(true)
     try {
-      const updated = await debtsService.addPayment(payingDebt.id, amount, payNote.trim() || undefined)
+      const updated = await debtsService.addPayment(payingDebt.id, amount, month, year, payNote.trim() || undefined)
       setDebts((prev) => prev.map((d) => d.id === updated.id ? updated : d))
       toast.success('Pago registrado')
       closePayment()
@@ -383,19 +367,10 @@ export default function Deudas() {
   return (
     <BaseLayout titleHeader='Deudas'>
       <p className='text-sm text-text-muted -mt-2 mb-4'>
-        Dinero que debes a otras personas o entidades.
+        Dinero que debes a otras personas o entidades. Los pagos se registran con mes y año.
       </p>
 
-      <div className='flex items-center gap-3 mb-4 flex-wrap'>
-        <select
-          value={selectedYearId ?? ''}
-          onChange={(e) => setSelectedYearId(Number(e.target.value))}
-          className='h-9 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
-        >
-          {fiscalYears.map((y) => (
-            <option key={y.id} value={y.id}>{y.year}</option>
-          ))}
-        </select>
+      <div className='flex items-center gap-3 mb-6'>
         <button
           onClick={() => setShowNewDebt(true)}
           className='flex items-center gap-1.5 bg-text-main text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-secondary-800 transition-colors'
@@ -405,38 +380,11 @@ export default function Deudas() {
         </button>
       </div>
 
-      {/* ── Filtro por mes ── */}
-      <div className='flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mb-5'>
-        <button
-          onClick={() => setSelectedMonth(null)}
-          className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
-            selectedMonth === null
-              ? 'bg-text-main text-white'
-              : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
-          }`}
-        >
-          Todos
-        </button>
-        {MONTHS.map((m, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedMonth(i + 1)}
-            className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              selectedMonth === i + 1
-                ? 'bg-text-main text-white'
-                : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
-            }`}
-          >
-            {m.slice(0, 3)}
-          </button>
-        ))}
-      </div>
-
-      {filteredDebts.length > 0 && (
+      {debts.length > 0 && (
         <div className='grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6'>
-          <SummaryCard label='Total adeudado'  value={fmt(totalDebt)}    icon={Landmark}      color='bg-red-100 text-red-600' />
-          <SummaryCard label='Total pagado'    value={fmt(totalPaid)}    icon={CheckCircle}   color='bg-green-100 text-green-600' />
-          <SummaryCard label='Por pagar'       value={fmt(totalPending)} icon={Clock}         color='bg-amber-100 text-amber-600' />
+          <SummaryCard label='Total adeudado'  value={fmt(totalDebt)}    icon={Landmark}    color='bg-red-100 text-red-600' />
+          <SummaryCard label='Total pagado'    value={fmt(totalPaid)}    icon={CheckCircle} color='bg-green-100 text-green-600' />
+          <SummaryCard label='Por pagar'       value={fmt(totalPending)} icon={Clock}       color='bg-amber-100 text-amber-600' />
         </div>
       )}
 
@@ -444,25 +392,15 @@ export default function Deudas() {
         <div className='flex justify-center py-12'>
           <div className='w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin' />
         </div>
-      ) : filteredDebts.length === 0 ? (
+      ) : debts.length === 0 ? (
         <div className='bg-white rounded-2xl border border-secondary-100 p-12 text-center'>
           <TrendingDown size={36} className='text-secondary-300 mx-auto mb-3' />
-          <p className='text-text-muted text-sm'>
-            {selectedMonth !== null
-              ? `Sin deudas en ${MONTHS[selectedMonth - 1]}.`
-              : 'No hay deudas registradas para este año.'}
-          </p>
+          <p className='text-text-muted text-sm'>No hay deudas registradas.</p>
         </div>
       ) : (
         <div className='flex flex-col gap-3 max-w-2xl'>
           {active.map((debt) => (
-            <DebtCard
-              key={debt.id}
-              debt={debt}
-              onAddPayment={setPayingDebt}
-              onDelete={handleDelete}
-              onDeletePayment={handleDeletePayment}
-            />
+            <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
           ))}
           {paid.length > 0 && (
             <>
@@ -470,13 +408,7 @@ export default function Deudas() {
                 <p className='text-xs font-semibold text-text-muted uppercase tracking-wide mt-2'>Pagadas</p>
               )}
               {paid.map((debt) => (
-                <DebtCard
-                  key={debt.id}
-                  debt={debt}
-                  onAddPayment={setPayingDebt}
-                  onDelete={handleDelete}
-                  onDeletePayment={handleDeletePayment}
-                />
+                <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
               ))}
             </>
           )}
@@ -497,28 +429,14 @@ export default function Deudas() {
                   autoFocus
                 />
               </div>
-              <div className='flex gap-3'>
-                <div className='flex flex-col gap-1.5 flex-1'>
-                  <label className='text-sm font-medium text-text-main'>Monto</label>
-                  <CurrencyInput
-                    value={newAmount}
-                    onChange={setNewAmount}
-                    placeholder='0'
-                    className='h-10 rounded-xl border border-secondary-200 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
-                  />
-                </div>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-sm font-medium text-text-main'>Mes</label>
-                  <select
-                    value={newMonth}
-                    onChange={(e) => setNewMonth(e.target.value)}
-                    className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
-                  >
-                    {MONTHS.map((m, i) => (
-                      <option key={i} value={i + 1}>{m}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Monto total</label>
+                <CurrencyInput
+                  value={newAmount}
+                  onChange={setNewAmount}
+                  placeholder='0'
+                  className='h-10 rounded-xl border border-secondary-200 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                />
               </div>
               <div className='flex flex-col gap-1.5'>
                 <label className='text-sm font-medium text-text-main'>Descripción <span className='text-text-muted font-normal'>(opcional)</span></label>
@@ -561,6 +479,31 @@ export default function Deudas() {
                   placeholder={`Máx. ${fmt(payingDebt.remaining)}`}
                   className='h-10 rounded-xl border border-secondary-200 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
                 />
+              </div>
+              <div className='flex gap-3'>
+                <div className='flex flex-col gap-1.5 flex-1'>
+                  <label className='text-sm font-medium text-text-main'>Mes</label>
+                  <select
+                    value={payMonth}
+                    onChange={(e) => setPayMonth(e.target.value)}
+                    className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                  >
+                    {MONTHS.map((m, i) => (
+                      <option key={i} value={i + 1}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className='flex flex-col gap-1.5 w-24'>
+                  <label className='text-sm font-medium text-text-main'>Año</label>
+                  <input
+                    type='number'
+                    value={payYear}
+                    onChange={(e) => setPayYear(e.target.value)}
+                    min={2000}
+                    max={2100}
+                    className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                  />
+                </div>
               </div>
               <div className='flex flex-col gap-1.5'>
                 <label className='text-sm font-medium text-text-main'>Nota <span className='text-text-muted font-normal'>(opcional)</span></label>
