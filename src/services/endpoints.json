@@ -49,5 +49,22 @@
         "create": "/Records",
         "update": "/Records",
         "delete": "/Records"
+    },
+    "budgets": {
+        "get": "/Budgets",
+        "create": "/Budgets",
+        "update": "/Budgets",
+        "delete": "/Budgets"
+    },
+    "debts": {
+        "get": "/Debts",
+        "create": "/Debts",
+        "delete": "/Debts"
+    },
+    "recurringExpenses": {
+        "get": "/RecurringExpenses",
+        "create": "/RecurringExpenses",
+        "update": "/RecurringExpenses",
+        "delete": "/RecurringExpenses"
     }
 }
