@@ -486,16 +486,15 @@ export default function Configuracion() {
   const [groupCategoryIds, setGroupCategoryIds] = useState<number[]>([])
   const [editingGroup, setEditingGroup] = useState<CategoryGroup | null>(null)
 
-  /* ── Carga inicial ── */
   useEffect(() => {
-    categoriesService.getAll().then(setCategories).catch(() => {})
-    fiscalYearsService.getAll().then(setFiscalYears).catch(() => {})
-    creditCardsService.getAll().then(setCreditCards).catch(() => {})
-    categoryGroupsService.getAll().then(setGroups).catch(() => {})
+    categoriesService.getAll().then(res => setCategories(Array.isArray(res) ? res : [])).catch(() => {})
+    fiscalYearsService.getAll().then(res => setFiscalYears(Array.isArray(res) ? res : [])).catch(() => {})
+    creditCardsService.getAll().then(res => setCreditCards(Array.isArray(res) ? res : [])).catch(() => {})
+    categoryGroupsService.getAll().then(res => setGroups(Array.isArray(res) ? res : [])).catch(() => {})
   }, [])
 
   // IDs de categorías asignadas a grupos
-  const assignedCategoryIds = groups.flatMap((g) => g.categoryIds)
+  const assignedCategoryIds = Array.isArray(groups) ? groups.flatMap((g) => g.categoryIds || []) : []
 
   const closeModal = () => {
     setOpenModal(null)

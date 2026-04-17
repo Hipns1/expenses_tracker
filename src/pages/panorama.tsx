@@ -212,8 +212,8 @@ export default function Panorama() {
       const sorted = [...years].sort((a, b) => b.year - a.year)
       setFiscalYears(sorted)
       if (sorted.length > 0) setSelectedYearId(sorted[0].id)
-      setCategories(cats)
-      setGroups(grps)
+      setCategories(Array.isArray(cats) ? cats : [])
+      setGroups(Array.isArray(grps) ? grps : [])
     }).catch(() => {})
   }, [])
 
@@ -266,7 +266,13 @@ export default function Panorama() {
   /* ── Map categoría → groupId ── */
   const catGroupId = useMemo(() => {
     const m: Record<number, number> = {}
-    for (const g of groups) for (const cid of g.categoryIds) m[cid] = g.id
+    if (Array.isArray(groups)) {
+      for (const g of groups) {
+        if (Array.isArray(g.categoryIds)) {
+          for (const cid of g.categoryIds) m[cid] = g.id
+        }
+      }
+    }
     return m
   }, [groups])
 
@@ -295,7 +301,11 @@ export default function Panorama() {
 
   const groupAnnual = useMemo(() => {
     const t: Record<number, number> = {}
-    for (const g of groups) t[g.id] = g.categoryIds.reduce((s, cid) => s + (catAnnual[cid] ?? 0), 0)
+    if (Array.isArray(groups)) {
+      for (const g of groups) {
+        t[g.id] = Array.isArray(g.categoryIds) ? g.categoryIds.reduce((s, cid) => s + (catAnnual[cid] ?? 0), 0) : 0
+      }
+    }
     return t
   }, [groups, catAnnual])
 
