@@ -66,5 +66,11 @@
         "create": "/RecurringExpenses",
         "update": "/RecurringExpenses",
         "delete": "/RecurringExpenses"
+    },
+    "categoryGroups": {
+        "getAll": "/CategoryGroups",
+        "create": "/CategoryGroups",
+        "update": "/CategoryGroups",
+        "delete": "/CategoryGroups"
     }
 }
