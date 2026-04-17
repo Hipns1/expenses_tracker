@@ -114,10 +114,9 @@ function AnalysisBar({ name, amount, ideal, income, indent = false }: {
 }
 
 /* ── Tarjeta de grupo en análisis ── */
-function GroupAnalysisCard({ group, amount, ideal, income, categories, ideals, catAnnual, catMonths }: {
+function GroupAnalysisCard({ group, amount, ideal, income, categories, catAnnual, catMonths }: {
   group: CategoryGroup; amount: number; ideal: number; income: number
   categories: Record<number, string>
-  ideals: Record<number, number>
   catAnnual: Record<number, number>
   catMonths: (cid: number) => number
 }) {
@@ -180,7 +179,7 @@ function GroupAnalysisCard({ group, amount, ideal, income, categories, ideals, c
                 key={cid}
                 name={categories[cid] ?? `Cat ${cid}`}
                 amount={catAmt}
-                ideal={ideals[cid] ?? 0}
+                ideal={0} // No individual ideals anymore
                 income={income}
                 indent
               />
@@ -314,11 +313,6 @@ export default function Panorama() {
   const annualExpenses = useMemo(() => monthlyData.reduce((s, d) => s + Object.values(d.expenses).reduce((ss, v) => ss + v, 0), 0), [monthlyData])
   const annualSavings = annualIncome - annualExpenses
 
-  const getGroupIdeal = (g: CategoryGroup) => 
-    Array.isArray(g.categoryIds) ? g.categoryIds.reduce((s, cid) => {
-      const c = categories.find(cat => cat.id === cid)
-      return s + (c?.monthlyIdeal ?? 0)
-    }, 0) : 0
   const hasUncategorized = monthlyData.some((d) => (d.expenses[-1] ?? 0) > 0)
 
   /* ── Datos para análisis % ── */
@@ -329,30 +323,26 @@ export default function Panorama() {
     const months = analysisMonth !== null ? 1 : 12
 
     const getCatAmt = (cid: number) => idxs.reduce((s, i) => s + getCatMonth(cid, i), 0)
-    const getCatIdeal = (cid: number) => {
-      const c = categories.find(cat => cat.id === cid)
-      return (c?.monthlyIdeal ?? 0) * months
-    }
 
     const groupData = groups.map((g) => ({
       group: g,
       amount: idxs.reduce((s, i) => s + getGroupMonth(g, i), 0),
-      ideal: getGroupIdeal(g) * months,
+      ideal: (g.monthlyIdeal ?? 0) * months,
     }))
     const ungroupedData = ungroupedCatIds.map((cid) => ({
-      cid, amount: getCatAmt(cid), ideal: getCatIdeal(cid),
+      cid, amount: getCatAmt(cid), ideal: 0,
     }))
     const uncatAmount = idxs.reduce((s, i) => s + getCatMonth(-1, i), 0)
 
-    return { income, expenses, groupData, ungroupedData, uncatAmount, getCatAmt, getCatIdeal, months }
-  }, [analysisMonth, monthlyData, groups, ungroupedCatIds, categories])
+    return { income, expenses, groupData, ungroupedData, uncatAmount, getCatAmt, months }
+  }, [analysisMonth, monthlyData, groups, ungroupedCatIds])
 
   const IDX = Array.from({ length: 12 }, (_, i) => i)
 
   return (
     <BaseLayout titleHeader='Panorama'>
       <p className='text-sm text-text-muted -mt-2 mb-5'>
-        Vista anual completa de ingresos, gastos y ahorro, con análisis porcentual por categoría.
+        Vista anual completa de ingresos, gastos y ahorro, con análisis porcentual por grupos de presupuesto.
       </p>
 
       {/* ── Selectores ── */}
@@ -626,7 +616,6 @@ export default function Panorama() {
                   ideal={ideal}
                   income={analysisData.income}
                   categories={catName}
-                  ideals={Object.fromEntries(categories.map(c => [c.id, c.monthlyIdeal ?? 0]))}
                   catAnnual={catAnnual}
                   catMonths={(cid) => analysisData.getCatAmt(cid)}
                 />

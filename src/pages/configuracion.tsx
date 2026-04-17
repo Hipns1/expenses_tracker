@@ -220,146 +220,6 @@ function ItemRow({
   )
 }
 
-/* ── Fila de Categoría con Ideal ── */
-function CategoryRow({
-  category, onEditName, onSaveIdeal, onDelete, isDeleting,
-}: {
-  category: Category
-  onEditName: () => void
-  onSaveIdeal: (v: number) => Promise<void>
-  onDelete: () => void
-  isDeleting: boolean
-}) {
-  const [editingIdeal, setEditingIdeal] = useState(false)
-  const [idealValue, setIdealValue] = useState('')
-  const [isSavingIdeal, setIsSavingIdeal] = useState(false)
-
-  const [pendingDelete, setPendingDelete] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleDeleteClick = () => {
-    if (!pendingDelete) {
-      setPendingDelete(true)
-      timerRef.current = setTimeout(() => setPendingDelete(false), 3000)
-    } else {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      setPendingDelete(false)
-      onDelete()
-    }
-  }
-
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
-
-  const startEditIdeal = () => {
-    setEditingIdeal(true)
-    setIdealValue(category.monthlyIdeal && category.monthlyIdeal > 0 ? String(Math.round(category.monthlyIdeal)) : '')
-  }
-
-  const commitEditIdeal = async () => {
-    setEditingIdeal(false)
-    const parsed = parseInt(idealValue) || 0
-    if (parsed === (category.monthlyIdeal ?? 0)) return
-
-    setIsSavingIdeal(true)
-    try {
-      await onSaveIdeal(parsed)
-    } finally {
-      setIsSavingIdeal(false)
-    }
-  }
-
-  const displayFormattedIdeal = idealValue ? new Intl.NumberFormat('es-CO').format(parseInt(idealValue) || 0) : ''
-
-  return (
-    <li className='flex flex-col sm:flex-row sm:items-center justify-between py-2 sm:py-1 px-3 rounded-xl hover:bg-secondary-50 group transition-colors gap-2'>
-      <div className='flex flex-col min-w-0'>
-        <span className='text-sm font-medium text-text-main'>{category.name}</span>
-        <AnimatePresence>
-          {pendingDelete && (
-            <motion.p
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className='text-[11px] text-danger font-medium'
-            >
-              ¿Confirmar? Los registros perderán esta categoría.
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <div className='flex items-center gap-3 self-end sm:self-auto'>
-        {/* IDEAL */}
-        <div className='flex items-center gap-1.5' title='Ideal mensual de gasto'>
-          <Target size={12} className='text-secondary-400' />
-          {editingIdeal ? (
-            <input
-              autoFocus
-              type='text'
-              value={displayFormattedIdeal}
-              onChange={(e) => setIdealValue(e.target.value.replace(/\D/g, ''))}
-              onBlur={commitEditIdeal}
-              onKeyDown={(e) => { if (e.key === 'Enter') commitEditIdeal(); if (e.key === 'Escape') setEditingIdeal(false) }}
-              className='w-24 sm:w-28 h-7 rounded-lg border border-primary px-2 text-[13px] text-right text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20'
-              placeholder='0'
-            />
-          ) : (
-            <button
-              onClick={!category.isSystem ? startEditIdeal : undefined}
-              disabled={category.isSystem || isSavingIdeal}
-              className={`flex items-center gap-1.5 h-7 px-2 rounded-lg border border-dashed border-secondary-200 text-[13px] transition-colors group/ideal ${
-                !category.isSystem ? 'hover:border-primary cursor-pointer' : 'cursor-not-allowed opacity-60'
-              }`}
-            >
-              {isSavingIdeal ? (
-                <Loader2 size={11} className='animate-spin text-text-muted' />
-              ) : category.monthlyIdeal && category.monthlyIdeal > 0 ? (
-                <span className='font-medium text-text-main group-hover/ideal:text-primary transition-colors'>
-                  {fmt(category.monthlyIdeal)}
-                </span>
-              ) : (
-                <span className='text-secondary-400'>Sin ideal</span>
-              )}
-              {!category.isSystem && (
-                <Pencil size={10} className='text-secondary-400 opacity-0 group-hover/ideal:opacity-100 transition-opacity' />
-              )}
-            </button>
-          )}
-        </div>
-
-        {/* ACCIONES */}
-        <div className={`flex-shrink-0 flex items-center gap-1 transition-all ${isDeleting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-          {!category.isSystem && (
-            <button
-              onClick={onEditName}
-              className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
-              title='Editar nombre'
-            >
-              <Pencil size={13} />
-            </button>
-          )}
-          {!category.isSystem && (
-            <button
-              onClick={handleDeleteClick}
-              disabled={isDeleting}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
-                pendingDelete ? 'opacity-100 bg-danger text-white hover:bg-danger/90' : 'hover:bg-danger/10 text-danger'
-              }`}
-              title={isDeleting ? 'Eliminando…' : pendingDelete ? 'Confirmar eliminación' : 'Eliminar'}
-            >
-              {isDeleting
-                ? <Loader2 size={13} className='animate-spin' />
-                : pendingDelete
-                ? <CheckCircle size={13} />
-                : <Trash2 size={13} />}
-            </button>
-          )}
-        </div>
-      </div>
-    </li>
-  )
-}
-
 /* ── Input simple para los modales ── */
 function ModalInput({
   label, value, onChange, placeholder, type = 'text', maxLength,
@@ -409,36 +269,42 @@ function GroupCard({ group, categories, onEdit, onDelete }: {
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   return (
-    <li className='py-3 px-3 rounded-xl hover:bg-secondary-50 group transition-colors'>
-      <div className='flex items-center justify-between mb-2'>
-        <span className='text-sm font-semibold text-text-main'>{group.name}</span>
+    <li className='py-4 px-4 rounded-2xl bg-secondary-50/50 border border-secondary-100 group transition-all hover:bg-white hover:shadow-md'>
+      <div className='flex items-center justify-between mb-3'>
+        <div className='flex items-baseline gap-2'>
+            <span className='text-sm font-bold text-text-main'>{group.name}</span>
+            <div className='flex items-center gap-1 text-primary' title='Ideal mensual del grupo'>
+                <Target size={12} />
+                <span className='text-xs font-semibold'>{group.monthlyIdeal ? fmt(group.monthlyIdeal) : 'Sin ideal'}</span>
+            </div>
+        </div>
         <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all'>
           <button
             onClick={() => onEdit(group)}
-            className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
+            className='w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
             title='Editar grupo'
           >
-            <Pencil size={13} />
+            <Pencil size={14} />
           </button>
           <button
             onClick={handleDeleteClick}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
               confirmDelete ? 'bg-danger text-white' : 'hover:bg-danger/10 text-danger'
             }`}
             title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar grupo'}
           >
-            {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+            {confirmDelete ? <CheckCircle size={14} /> : <Trash2 size={14} />}
           </button>
         </div>
       </div>
       <div className='flex flex-wrap gap-1.5'>
         {assignedCats.map((c) => (
-          <span key={c.id} className='inline-flex items-center text-xs font-medium bg-primary/8 text-primary px-2 py-0.5 rounded-full'>
+          <span key={c.id} className='inline-flex items-center text-[11px] font-medium bg-white border border-secondary-200 text-text-muted px-2 py-0.5 rounded-full'>
             {c.name}
           </span>
         ))}
         {assignedCats.length === 0 && (
-          <span className='text-xs text-text-muted italic'>Sin categorías asignadas</span>
+          <span className='text-xs text-text-muted italic border-none bg-transparent px-0'>Sin categorías asignadas</span>
         )}
       </div>
       <AnimatePresence>
@@ -447,7 +313,7 @@ function GroupCard({ group, categories, onEdit, onDelete }: {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className='text-[11px] text-danger font-medium mt-1.5'
+            className='text-[11px] text-danger font-medium mt-2'
           >
             ¿Confirmar? El grupo se elimina; las categorías se conservan.
           </motion.p>
@@ -485,9 +351,11 @@ export default function Configuracion() {
 
   // Form fields - grupos
   const [groupName, setGroupName] = useState('')
+  const [groupIdeal, setGroupIdeal] = useState('')
   const [groupCategoryIds, setGroupCategoryIds] = useState<number[]>([])
   const [editingGroup, setEditingGroup] = useState<CategoryGroup | null>(null)
 
+  /* ── Carga inicial ── */
   useEffect(() => {
     categoriesService.getAll().then(res => setCategories(Array.isArray(res) ? res : [])).catch(() => {})
     fiscalYearsService.getAll().then(res => setFiscalYears(Array.isArray(res) ? res : [])).catch(() => {})
@@ -496,7 +364,9 @@ export default function Configuracion() {
   }, [])
 
   // IDs de categorías asignadas a grupos
-  const assignedCategoryIds = Array.isArray(groups) ? groups.flatMap((g) => g.categoryIds || []) : []
+  const assignedCategoryIds = Array.isArray(groups) 
+    ? groups.flatMap((g) => g.categoryIds || []) 
+    : []
 
   const closeModal = () => {
     setOpenModal(null)
@@ -504,7 +374,7 @@ export default function Configuracion() {
     setYearValue(String(new Date().getFullYear()))
     setEditingCategory(null); setEditCategoryName('')
     setEditingCard(null); setEditCardName(''); setEditCardDigits(''); setEditCardType('Card')
-    setGroupName(''); setGroupCategoryIds([]); setEditingGroup(null)
+    setGroupName(''); setGroupIdeal(''); setGroupCategoryIds([]); setEditingGroup(null)
   }
 
   const openEditCategory = (c: Category) => {
@@ -518,12 +388,15 @@ export default function Configuracion() {
   }
 
   const openCreateGroup = () => {
-    setEditingGroup(null); setGroupName(''); setGroupCategoryIds([])
+    setEditingGroup(null); setGroupName(''); setGroupIdeal(''); setGroupCategoryIds([])
     setOpenModal('createGroup')
   }
 
   const openEditGroup = (g: CategoryGroup) => {
-    setEditingGroup(g); setGroupName(g.name); setGroupCategoryIds([...(g.categoryIds || [])])
+    setEditingGroup(g)
+    setGroupName(g.name)
+    setGroupIdeal(g.monthlyIdeal ? String(Math.round(g.monthlyIdeal)) : '')
+    setGroupCategoryIds([...(g.categoryIds || [])])
     setOpenModal('editGroup')
   }
 
@@ -543,18 +416,11 @@ export default function Configuracion() {
     if (!editingCategory || !editCategoryName.trim()) return
     setIsSubmitting(true)
     try {
-      const updated = await categoriesService.update(editingCategory.id, editCategoryName.trim(), editingCategory.monthlyIdeal)
+      const updated = await categoriesService.update(editingCategory.id, editCategoryName.trim())
       setCategories((prev) => prev.map((c) => c.id === updated.id ? updated : c))
       toast.success('Categoría actualizada'); closeModal()
     } catch { toast.error('Error al actualizar categoría')
     } finally { setIsSubmitting(false) }
-  }
-
-  const handleSaveCategoryIdeal = async (category: Category, ideal: number) => {
-    const idealVal = ideal > 0 ? ideal : undefined
-    const updated = await categoriesService.update(category.id, category.name, idealVal)
-    setCategories((prev) => prev.map((c) => c.id === updated.id ? updated : c))
-    toast.success('Ideal guardado')
   }
 
   const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null)
@@ -637,14 +503,15 @@ export default function Configuracion() {
   const handleSaveGroup = async () => {
     if (!groupName.trim()) return
     setIsSubmitting(true)
+    const idealVal = parseInt(groupIdeal) || 0
     try {
         if (editingGroup) {
-            const updated = await categoryGroupsService.update(editingGroup.id, groupName.trim(), groupCategoryIds)
-            setGroups((prev) => prev.map(g => g.id === updated.id ? updated : g))
+            const updated = await categoryGroupsService.update(editingGroup.id, groupName.trim(), groupCategoryIds, idealVal > 0 ? idealVal : undefined)
+            setGroups((prev) => Array.isArray(prev) ? prev.map(g => g.id === updated.id ? updated : g) : [updated])
             toast.success('Grupo actualizado')
         } else {
-            const created = await categoryGroupsService.create(groupName.trim(), groupCategoryIds)
-            setGroups((prev) => [...prev, created])
+            const created = await categoryGroupsService.create(groupName.trim(), groupCategoryIds, idealVal > 0 ? idealVal : undefined)
+            setGroups((prev) => Array.isArray(prev) ? [...prev, created] : [created])
             toast.success('Grupo creado')
         }
         closeModal()
@@ -669,55 +536,56 @@ export default function Configuracion() {
   const categoriesForGroupModal = () => {
     return categories.filter((c) => !c.isSystem && (
       !assignedCategoryIds.includes(c.id) ||
-      (editingGroup?.categoryIds.includes(c.id))
+      (editingGroup?.categoryIds?.includes(c.id))
     ))
   }
 
   return (
     <BaseLayout titleHeader='Configuración'>
       <p className='text-sm text-text-muted -mt-2 mb-2'>
-        Administra categorías, métodos de pago, años fiscales y grupos de análisis.
+        Administra grupos, categorías, métodos de pago y años fiscales.
       </p>
 
       <div className='flex flex-col gap-5 max-w-3xl'>
-        {/* ── Categorías ── */}
-        <Section
-          icon={Tag}
-          title='Categorías'
-          onAdd={() => setOpenModal('category')}
-          addLabel='Añadir'
-          isEmpty={categories.length === 0}
-          emptyText='Sin categorías'
-        >
-          {categories.map((c) => (
-            <CategoryRow
-              key={c.id}
-              category={c}
-              onEditName={() => openEditCategory(c)}
-              onSaveIdeal={(v) => handleSaveCategoryIdeal(c, v)}
-              onDelete={() => handleDeleteCategory(c.id)}
-              isDeleting={deletingCategoryId === c.id}
-            />
-          ))}
-        </Section>
-
         {/* ── Grupos de categorías ── */}
         <Section
           icon={Layers}
-          title='Grupos de categorías'
-          subtitle='Agrupa categorías para ver subtotales en Panorama'
+          title='Grupos de análisis'
+          subtitle='Define límites de gasto por grupos de categorías'
           onAdd={openCreateGroup}
           addLabel='Nuevo grupo'
-          isEmpty={groups.length === 0}
-          emptyText='Sin grupos. Crea grupos para ver subtotales en la vista Panorama.'
+          isEmpty={!Array.isArray(groups) || groups.length === 0}
+          emptyText='Sin grupos. Los grupos permiten definir presupuestos combinados.'
         >
-          {groups.map((g) => (
+          {Array.isArray(groups) && groups.map((g) => (
             <GroupCard
               key={g.id}
               group={g}
               categories={categories}
               onEdit={openEditGroup}
               onDelete={handleDeleteGroup}
+            />
+          ))}
+        </Section>
+
+        {/* ── Categorías ── */}
+        <Section
+          icon={Tag}
+          title='Categorías individuales'
+          subtitle='Gestiona tus etiquetas de gasto'
+          onAdd={() => setOpenModal('category')}
+          addLabel='Añadir'
+          isEmpty={categories.length === 0}
+          emptyText='Sin categorías'
+        >
+          {categories.map((c) => (
+            <ItemRow
+              key={c.id}
+              label={c.name}
+              onEdit={() => openEditCategory(c)}
+              onDelete={c.isSystem ? undefined : () => handleDeleteCategory(c.id)}
+              deleteWarning='¿Confirmar? Se desvinculará de sus registros.'
+              isDeleting={deletingCategoryId === c.id}
             />
           ))}
         </Section>
@@ -739,7 +607,7 @@ export default function Configuracion() {
               icon={<PaymentTypeIcon type={c.type} size={13} />}
               onEdit={() => openEditCard(c)}
               onDelete={() => handleDeleteCard(c.id)}
-              deleteWarning='¿Confirmar? Los registros con este método de pago lo perderán.'
+              deleteWarning='¿Confirmar? Se desvinculará de sus registros.'
               isDeleting={deletingCardId === c.id}
             />
           ))}
@@ -870,15 +738,28 @@ export default function Configuracion() {
                 onChange={setGroupName}
                 placeholder='Ej: Hogar, Servicios, Ocio...'
               />
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Ideal mensual del grupo</label>
+                <div className='relative'>
+                    <input
+                        type='text'
+                        value={groupIdeal ? new Intl.NumberFormat('es-CO').format(parseInt(groupIdeal) || 0) : ''}
+                        onChange={(e) => setGroupIdeal(e.target.value.replace(/\D/g, ''))}
+                        className='h-10 w-full rounded-xl border border-secondary-200 pl-3 pr-10 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                        placeholder='0'
+                    />
+                    <Target size={14} className='absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400' />
+                </div>
+              </div>
               <div className='flex flex-col gap-2'>
                 <label className='text-sm font-medium text-text-main'>
-                  Categorías
-                  <span className='text-xs font-normal text-text-muted ml-1'>(solo las no asignadas a otro grupo)</span>
+                  Categorías incluidas
+                  <span className='text-xs font-normal text-text-muted ml-1'>(solo las no asignadas)</span>
                 </label>
                 <div className='max-h-52 overflow-y-auto flex flex-col gap-0.5 pr-1'>
                   {categoriesForGroupModal().length === 0 ? (
-                    <p className='text-xs text-text-muted py-3 px-2'>
-                      No hay categorías disponibles. Las demás ya están en otro grupo.
+                    <p className='text-xs text-text-muted py-3 px-2 italic'>
+                      No hay más categorías disponibles para asignar.
                     </p>
                   ) : (
                     categoriesForGroupModal().map((c) => (
