@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Repeat2, Plus, Pencil, Trash2, X, CheckCircle, CalendarDays, Tag, Loader2 } from 'lucide-react'
+import { Repeat2, Plus, Pencil, Trash2, X, CheckCircle, CalendarDays, Tag, Loader2, SendHorizonal } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { categoriesService, type Category } from '@/services/categories'
+import { creditCardsService, type CreditCard } from '@/services/creditCards'
+import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { recurringExpensesService, type RecurringExpense, type CreateRecurringExpensePayload } from '@/services/recurringExpenses'
+import { recordsService } from '@/services/records'
 import { toast } from 'react-toastify'
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
+
+const MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
 
 const ORDINALS: Record<number, string> = {
   1: '1°', 2: '2°', 3: '3°', 4: '4°', 5: '5°', 6: '6°', 7: '7°', 8: '8°', 9: '9°', 10: '10°',
@@ -91,11 +99,13 @@ function ExpenseRow({
   expense,
   onEdit,
   onDelete,
+  onRegister,
   isDeleting,
 }: {
   expense: RecurringExpense
   onEdit: (e: RecurringExpense) => void
   onDelete: (id: number) => void
+  onRegister: (e: RecurringExpense) => void
   isDeleting: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -138,6 +148,14 @@ function ExpenseRow({
       </div>
       <span className='text-sm font-semibold text-text-main flex-shrink-0'>{fmt(expense.amount)}</span>
       <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0'>
+        {/* Registrar en mes */}
+        <button
+          onClick={() => onRegister(expense)}
+          className='w-7 h-7 flex items-center justify-center rounded-lg text-primary hover:bg-primary/10 transition-colors'
+          title='Registrar en un mes'
+        >
+          <SendHorizonal size={13} />
+        </button>
         <button
           onClick={() => onEdit(expense)}
           className='w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:bg-secondary-100 transition-colors'
@@ -168,8 +186,11 @@ function ExpenseRow({
 export default function Recurrentes() {
   const [expenses, setExpenses] = useState<RecurringExpense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([])
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Modal crear/editar gasto fijo
   const [showModal, setShowModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState<RecurringExpense | null>(null)
   const [formName, setFormName] = useState('')
@@ -179,19 +200,35 @@ export default function Recurrentes() {
   const [formCategory, setFormCategory] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Modal registrar en mes
+  const [registeringExpense, setRegisteringExpense] = useState<RecurringExpense | null>(null)
+  const [regYearId, setRegYearId] = useState<string>('')
+  const [regMonth, setRegMonth] = useState<string>(String(new Date().getMonth() + 1))
+  const [regCreditCardId, setRegCreditCardId] = useState<string>('')
+  const [registering, setRegistering] = useState(false)
+
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
   useEffect(() => {
     Promise.all([
       recurringExpensesService.getAll(),
       categoriesService.getAll(),
-    ]).then(([exp, cats]) => {
+      fiscalYearsService.getAll(),
+      creditCardsService.getAll(),
+    ]).then(([exp, cats, years, cards]) => {
       setExpenses(exp)
       setCategories(cats)
+      const sorted = [...years].sort((a, b) => b.year - a.year)
+      setFiscalYears(sorted)
+      if (sorted.length > 0) setRegYearId(String(sorted[0].id))
+      setCreditCards(cards)
     }).catch(() => toast.error('Error al cargar datos'))
       .finally(() => setLoading(false))
   }, [])
 
   const totalMonthly = expenses.reduce((s, e) => s + e.amount, 0)
 
+  /* ── Handlers crear/editar ── */
   const openCreate = () => {
     setEditingExpense(null)
     setFormName(''); setFormAmount(''); setFormDay(''); setFormDescription(''); setFormCategory('')
@@ -244,8 +281,6 @@ export default function Recurrentes() {
     }
   }
 
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-
   const handleDelete = async (id: number) => {
     setDeletingId(id)
     try {
@@ -256,6 +291,42 @@ export default function Recurrentes() {
       toast.error('Error al eliminar')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  /* ── Handlers registrar en mes ── */
+  const openRegister = (e: RecurringExpense) => {
+    setRegisteringExpense(e)
+    setRegMonth(String(new Date().getMonth() + 1))
+    setRegCreditCardId('')
+    // Mantener el año seleccionado (ya inicializado al más reciente)
+  }
+
+  const closeRegister = () => {
+    setRegisteringExpense(null)
+    setRegCreditCardId('')
+  }
+
+  const handleRegister = async () => {
+    if (!registeringExpense || !regYearId || !regCreditCardId) return
+    setRegistering(true)
+    try {
+      await recordsService.create({
+        type: 'Expense',
+        amount: Math.round(registeringExpense.amount),
+        month: parseInt(regMonth),
+        fiscalYearId: parseInt(regYearId),
+        description: registeringExpense.name,
+        categoryId: registeringExpense.category?.id ?? null,
+        creditCardId: parseInt(regCreditCardId),
+      })
+      const yearLabel = fiscalYears.find((y) => String(y.id) === regYearId)?.year ?? ''
+      toast.success(`"${registeringExpense.name}" registrado en ${MONTHS[parseInt(regMonth) - 1]} ${yearLabel}`)
+      closeRegister()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Error al registrar el gasto')
+    } finally {
+      setRegistering(false)
     }
   }
 
@@ -304,6 +375,7 @@ export default function Recurrentes() {
                 expense={e}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+                onRegister={openRegister}
                 isDeleting={deletingId === e.id}
               />
             ))}
@@ -312,6 +384,7 @@ export default function Recurrentes() {
       )}
 
       <AnimatePresence>
+        {/* ── Modal crear/editar ── */}
         {showModal && (
           <Modal
             title={editingExpense ? 'Editar gasto fijo' : 'Nuevo gasto fijo'}
@@ -379,6 +452,83 @@ export default function Recurrentes() {
                 className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
               >
                 {submitting ? 'Guardando...' : editingExpense ? 'Actualizar' : 'Agregar'}
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* ── Modal registrar en mes ── */}
+        {registeringExpense && (
+          <Modal title='Registrar en gastos' onClose={closeRegister}>
+            <div className='flex flex-col gap-4'>
+              {/* Resumen del gasto fijo */}
+              <div className='bg-secondary-50 rounded-xl px-4 py-3'>
+                <p className='text-sm font-semibold text-text-main'>{registeringExpense.name}</p>
+                <p className='text-lg font-bold text-text-main mt-0.5'>{fmt(registeringExpense.amount)}</p>
+                {registeringExpense.category && (
+                  <p className='text-xs text-text-muted mt-0.5 flex items-center gap-1'>
+                    <Tag size={10} /> {registeringExpense.category.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Año */}
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Año fiscal</label>
+                <select
+                  value={regYearId}
+                  onChange={(e) => setRegYearId(e.target.value)}
+                  className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                >
+                  {fiscalYears.length === 0 && (
+                    <option value=''>Sin años fiscales</option>
+                  )}
+                  {fiscalYears.map((y) => (
+                    <option key={y.id} value={y.id}>{y.year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Mes */}
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Mes</label>
+                <select
+                  value={regMonth}
+                  onChange={(e) => setRegMonth(e.target.value)}
+                  className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                >
+                  {MONTHS.map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Método de pago */}
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Método de pago</label>
+                <select
+                  value={regCreditCardId}
+                  onChange={(e) => setRegCreditCardId(e.target.value)}
+                  className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                >
+                  <option value=''>Selecciona un método de pago</option>
+                  {creditCards.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.lastFourDigits ? ` ···· ${c.lastFourDigits}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleRegister}
+                disabled={registering || !regYearId || !regCreditCardId}
+                className='w-full h-10 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2'
+              >
+                {registering
+                  ? <><Loader2 size={15} className='animate-spin' /> Registrando...</>
+                  : <><SendHorizonal size={15} /> Registrar gasto</>
+                }
               </button>
             </div>
           </Modal>
