@@ -4,6 +4,7 @@ import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { categoriesService, type Category } from '@/services/categories'
 import { creditCardsService, type CreditCard } from '@/services/creditCards'
 import { recordsService, type Record as FinanceRecord, type RecordType, type CreateRecordPayload, type UpdateRecordPayload } from '@/services/records'
+import { categoryGroupsService, type CategoryGroup } from '@/services/categoryGroups'
 import { invoiceService } from '@/services'
 import { toast } from 'react-toastify'
 import {
@@ -173,6 +174,7 @@ const EMPTY_FORM: RecordFormState = {
 function RecordForm({
   initial,
   categories,
+  groups,
   creditCards,
   onSubmit,
   isSubmitting,
@@ -180,6 +182,7 @@ function RecordForm({
 }: {
   initial: RecordFormState
   categories: Category[]
+  groups: CategoryGroup[]
   creditCards: CreditCard[]
   onSubmit: (values: RecordFormState) => void
   isSubmitting: boolean
@@ -306,16 +309,24 @@ function RecordForm({
       <div className='flex flex-col gap-1.5'>
         <label className='text-sm font-medium text-text-main'>Categoría</label>
         <div className='relative'>
-          <select
-            value={form.categoryId}
-            onChange={(e) => set('categoryId', e.target.value)}
-            className='w-full h-10 appearance-none rounded-xl border border-secondary-200 px-3 pr-9 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white'
-          >
-            <option value=''>Selecciona una categoría</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            <select
+              value={form.categoryId}
+              onChange={(e) => set('categoryId', e.target.value)}
+              className='w-full h-10 appearance-none rounded-xl border border-secondary-200 px-3 pr-9 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-white'
+            >
+              <option value=''>Selecciona una categoría</option>
+              {groups.map((g) => (
+                <optgroup key={g.id} label={g.name}>
+                  {categories.filter(c => c.categoryGroupId === g.id).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+              {/* Orphan categories or system categories if any */}
+              {categories.filter(c => !groups.some(g => g.id === c.categoryGroupId)).map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           <ChevronDown size={14} className='absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 pointer-events-none' />
         </div>
       </div>
@@ -446,6 +457,7 @@ function RecordForm({
 export default function Registros() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [groups, setGroups] = useState<CategoryGroup[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [records, setRecords] = useState<FinanceRecord[]>([])
 
@@ -473,6 +485,7 @@ export default function Registros() {
       if (sorted.length > 0) setSelectedYearId(sorted[0].id)
     }).catch(() => {})
     categoriesService.getAll().then(setCategories).catch(() => {})
+    categoryGroupsService.getAll().then(setGroups).catch(() => {})
     creditCardsService.getAll().then(setCreditCards).catch(() => {})
   }, [])
 
@@ -954,6 +967,7 @@ export default function Registros() {
               <RecordForm
                 initial={formInitial}
                 categories={categories}
+                groups={groups}
                 creditCards={creditCards}
                 onSubmit={handleCreate}
                 isSubmitting={isSubmitting}
@@ -969,6 +983,7 @@ export default function Registros() {
               key={editingRecord.id}
               initial={editInitial}
               categories={categories}
+              groups={groups}
               creditCards={creditCards}
               onSubmit={handleUpdate}
               isSubmitting={isSubmitting}

@@ -6,9 +6,9 @@ import { creditCardsService, type CreditCard, type PaymentMethodType, PAYMENT_ME
 import { categoryGroupsService, type CategoryGroup } from '@/services/categoryGroups'
 import { toast } from 'react-toastify'
 import {
-  Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X,
+  Plus, Trash2, CreditCard as CreditCardIcon, CalendarDays, X,
   CheckCircle, Pencil, Building2, Smartphone, Banknote, Loader2,
-  Layers, Target,
+  Layers, Target, ChevronDown, ChevronRight, Tags
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -129,9 +129,9 @@ function Section({
       </div>
       <div className='px-6 py-4'>
         {isEmpty ? (
-          <p className='text-sm text-text-muted py-2'>{emptyText}</p>
+          <p className='text-sm text-text-muted py-2 text-center my-4'>{emptyText}</p>
         ) : (
-          <ul className='space-y-2'>{children}</ul>
+          <div className='flex flex-col gap-3'>{children}</div>
         )}
       </div>
     </div>
@@ -171,9 +171,9 @@ function ItemRow({
       <div className='flex items-center gap-2.5 min-w-0'>
         {icon && <span className='text-text-muted flex-shrink-0'>{icon}</span>}
         <div className='flex flex-col min-w-0'>
-          <div>
-            <span className='text-sm font-medium text-text-main'>{label}</span>
-            {sublabel && <span className='text-xs text-text-muted ml-2'>{sublabel}</span>}
+          <div className='flex items-baseline'>
+            <span className='text-sm font-medium text-text-main truncate'>{label}</span>
+            {sublabel && <span className='text-[10px] text-text-muted ml-2 font-normal'>{sublabel}</span>}
           </div>
           <AnimatePresence>
             {pending && (
@@ -181,7 +181,7 @@ function ItemRow({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className='text-[11px] text-danger font-medium mt-0.5'
+                className='text-[10px] text-danger font-medium mt-0.5'
               >
                 {deleteWarning}
               </motion.p>
@@ -194,25 +194,19 @@ function ItemRow({
           <button
             onClick={onEdit}
             className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
-            title='Editar'
           >
-            <Pencil size={13} />
+            <Pencil size={12} />
           </button>
         )}
         {onDelete && (
           <button
             onClick={handleDeleteClick}
             disabled={isDeleting}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
-              pending ? 'opacity-100 bg-danger text-white hover:bg-danger/90' : 'hover:bg-danger/10 text-danger'
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+              pending ? 'bg-danger text-white hover:bg-danger/90' : 'hover:bg-danger/10 text-danger'
             }`}
-            title={isDeleting ? 'Eliminando…' : pending ? 'Confirmar eliminación' : 'Eliminar'}
           >
-            {isDeleting
-              ? <Loader2 size={13} className='animate-spin' />
-              : pending
-              ? <CheckCircle size={13} />
-              : <Trash2 size={13} />}
+            {isDeleting ? <Loader2 size={12} className='animate-spin' /> : pending ? <CheckCircle size={12} /> : <Trash2 size={12} />}
           </button>
         )}
       </div>
@@ -220,110 +214,114 @@ function ItemRow({
   )
 }
 
-/* ── Input simple para los modales ── */
-function ModalInput({
-  label, value, onChange, placeholder, type = 'text', maxLength,
-}: {
-  label: string; value: string; onChange: (v: string) => void
-  placeholder?: string; type?: string; maxLength?: number
-}) {
-  return (
-    <div className='flex flex-col gap-1.5'>
-      <label className='text-sm font-medium text-text-main'>{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
-      />
-    </div>
-  )
-}
-
-/* ── Tarjeta de grupo de categorías ── */
-function GroupCard({ group, categories, onEdit, onDelete }: {
+/* ── Tarjeta de grupo con categorías anidadas ── */
+function GroupCard({ group, categories, onEdit, onDelete, onAddCategory, onEditCategory, onDeleteCategory, deletingId }: {
   group: CategoryGroup; categories: Category[]
   onEdit: (g: CategoryGroup) => void; onDelete: (id: number) => void
+  onAddCategory: (groupId: number) => void
+  onEditCategory: (c: Category) => void
+  onDeleteCategory: (id: number) => void
+  deletingId: number | null
 }) {
+  const [isExpanded, setIsExpanded] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  
-  // Categorías que pertenecen a este grupo
-  const assignedCats = Array.isArray(group.categoryIds) 
-    ? categories.filter((c) => group.categoryIds.includes(c.id))
-    : []
+
+  const groupCats = categories.filter(c => c.categoryGroupId === group.id)
 
   const handleDeleteClick = () => {
     if (!confirmDelete) {
       setConfirmDelete(true)
       timerRef.current = setTimeout(() => setConfirmDelete(false), 3000)
     } else {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      setConfirmDelete(false)
       onDelete(group.id)
+      setConfirmDelete(false)
     }
   }
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
-
   return (
-    <li className='py-4 px-4 rounded-2xl bg-secondary-50/50 border border-secondary-100 group transition-all hover:bg-white hover:shadow-md'>
-      <div className='flex items-center justify-between mb-3'>
-        <div className='flex items-baseline gap-2'>
-            <span className='text-sm font-bold text-text-main'>{group.name}</span>
-            <div className='flex items-center gap-1 text-primary' title='Ideal mensual del grupo'>
+    <div className='bg-secondary-50/50 rounded-2xl border border-secondary-100 overflow-hidden transition-all hover:bg-white hover:shadow-sm'>
+      <div className='flex items-center justify-between px-4 py-3 bg-white/50'>
+        <div className='flex items-center gap-2 overflow-hidden'>
+          <button onClick={() => setIsExpanded(!isExpanded)} className='text-secondary-400 hover:text-primary transition-colors'>
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+          <span className='font-bold text-sm text-text-main truncate'>{group.name}</span>
+          {group.monthlyIdeal && (
+             <div className='flex items-center gap-1 text-primary flex-shrink-0 ml-1'>
                 <Target size={12} />
-                <span className='text-xs font-semibold'>{group.monthlyIdeal ? fmt(group.monthlyIdeal) : 'Sin ideal'}</span>
-            </div>
+                <span className='text-[11px] font-bold'>{fmt(group.monthlyIdeal)}</span>
+             </div>
+          )}
         </div>
-        <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all'>
+        <div className='flex items-center gap-1'>
           <button
-            onClick={() => onEdit(group)}
-            className='w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
-            title='Editar grupo'
+            onClick={() => onAddCategory(group.id)}
+            className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors'
+            title='Añadir categoría'
           >
-            <Pencil size={14} />
+            <Plus size={14} />
+          </button>
+          <div className='w-px h-4 bg-secondary-200 mx-0.5' />
+          <button onClick={() => onEdit(group)} className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-secondary-100 text-text-muted hover:text-primary transition-colors'>
+            <Pencil size={13} />
           </button>
           <button
             onClick={handleDeleteClick}
-            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
-              confirmDelete ? 'bg-danger text-white' : 'hover:bg-danger/10 text-danger'
-            }`}
-            title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar grupo'}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${confirmDelete ? 'bg-danger text-white' : 'hover:bg-danger/10 text-danger'}`}
           >
-            {confirmDelete ? <CheckCircle size={14} /> : <Trash2 size={14} />}
+            {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
           </button>
         </div>
       </div>
-      <div className='flex flex-wrap gap-1.5'>
-        {assignedCats.map((c) => (
-          <span key={c.id} className='inline-flex items-center text-[11px] font-medium bg-white border border-secondary-200 text-text-muted px-2 py-0.5 rounded-full'>
-            {c.name}
-          </span>
-        ))}
-        {assignedCats.length === 0 && (
-          <span className='text-xs text-text-muted italic border-none bg-transparent px-0'>Sin categorías asignadas</span>
-        )}
-      </div>
+      
       <AnimatePresence>
-        {confirmDelete && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className='text-[11px] text-danger font-medium mt-2'
+        {isExpanded && (
+          <motion.ul
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className='px-3 py-1 pb-3 space-y-0.5'
           >
-            ¿Confirmar? El grupo se elimina; las categorías se conservan.
-          </motion.p>
+            {groupCats.length === 0 ? (
+              <p className='text-[11px] text-text-muted italic px-3 py-2'>Sin categorías</p>
+            ) : (
+              groupCats.map(c => (
+                <ItemRow
+                  key={c.id}
+                  label={c.name}
+                  onEdit={() => onEditCategory(c)}
+                  onDelete={() => onDeleteCategory(c.id)}
+                  deleteWarning='¿Confirmar? Se desvinculará de registros.'
+                  isDeleting={deletingId === c.id}
+                />
+              ))
+            )}
+            {confirmDelete && (
+                <p className='text-[10px] text-danger font-medium px-3 pt-2 mt-2 border-t border-danger/10'>
+                    ¿Eliminar grupo? Las categorías se moverán a otro grupo.
+                </p>
+            )}
+          </motion.ul>
         )}
       </AnimatePresence>
-    </li>
+    </div>
   )
 }
 
-/* ── Página principal ── */
+/* ── Input simple ── */
+function ModalInput({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  return (
+    <div className='flex flex-col gap-1.5'>
+      <label className='text-sm font-medium text-text-main'>{label}</label>
+      <input
+        type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+      />
+    </div>
+  )
+}
+
 export default function Configuracion() {
   const [openModal, setOpenModal] = useState<ModalType>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -333,461 +331,236 @@ export default function Configuracion() {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [groups, setGroups] = useState<CategoryGroup[]>([])
 
-  // Form fields - crear
-  const [categoryName, setCategoryName] = useState('')
-  const [cardName, setCardName] = useState('')
-  const [cardDigits, setCardDigits] = useState('')
-  const [cardType, setCardType] = useState<PaymentMethodType>('Card')
-  const [yearValue, setYearValue] = useState(String(new Date().getFullYear()))
+  // State
+  const [modalData, setModalData] = useState({
+    categoryName: '',
+    groupId: 0,
+    groupName: '',
+    groupIdeal: '',
+    cardName: '',
+    cardDigits: '',
+    cardType: 'Card' as PaymentMethodType,
+    yearValue: String(new Date().getFullYear()),
+  })
 
-  // Form fields - editar
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [editCategoryName, setEditCategoryName] = useState('')
-  
-  const [editingCard, setEditingCard] = useState<CreditCard | null>(null)
-  const [editCardName, setEditCardName] = useState('')
-  const [editCardDigits, setEditCardDigits] = useState('')
-  const [editCardType, setEditCardType] = useState<PaymentMethodType>('Card')
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  // Form fields - grupos
-  const [groupName, setGroupName] = useState('')
-  const [groupIdeal, setGroupIdeal] = useState('')
-  const [groupCategoryIds, setGroupCategoryIds] = useState<number[]>([])
-  const [editingGroup, setEditingGroup] = useState<CategoryGroup | null>(null)
-
-  /* ── Carga inicial ── */
   useEffect(() => {
-    categoriesService.getAll().then(res => setCategories(Array.isArray(res) ? res : [])).catch(() => {})
-    fiscalYearsService.getAll().then(res => setFiscalYears(Array.isArray(res) ? res : [])).catch(() => {})
-    creditCardsService.getAll().then(res => setCreditCards(Array.isArray(res) ? res : [])).catch(() => {})
-    categoryGroupsService.getAll().then(res => setGroups(Array.isArray(res) ? res : [])).catch(() => {})
+    Promise.all([
+      categoriesService.getAll(),
+      fiscalYearsService.getAll(),
+      creditCardsService.getAll(),
+      categoryGroupsService.getAll()
+    ]).then(([c, f, cr, g]) => {
+      setCategories(Array.isArray(c) ? c : [])
+      setFiscalYears(Array.isArray(f) ? f : [])
+      setCreditCards(Array.isArray(cr) ? cr : [])
+      setGroups(Array.isArray(g) ? g : [])
+    }).catch(() => {})
   }, [])
 
-  // IDs de categorías asignadas a grupos
-  const assignedCategoryIds = Array.isArray(groups) 
-    ? groups.flatMap((g) => g.categoryIds || []) 
-    : []
-
   const closeModal = () => {
-    setOpenModal(null)
-    setCategoryName(''); setCardName(''); setCardDigits(''); setCardType('Card')
-    setYearValue(String(new Date().getFullYear()))
-    setEditingCategory(null); setEditCategoryName('')
-    setEditingCard(null); setEditCardName(''); setEditCardDigits(''); setEditCardType('Card')
-    setGroupName(''); setGroupIdeal(''); setGroupCategoryIds([]); setEditingGroup(null)
+    setOpenModal(null); setEditingItem(null)
+    setModalData({ ...modalData, categoryName: '', groupName: '', groupIdeal: '', cardName: '', cardDigits: '', cardType: 'Card' })
   }
 
-  const openEditCategory = (c: Category) => {
-    setEditingCategory(c); setEditCategoryName(c.name); setOpenModal('editCategory')
-  }
-
-  const openEditCard = (c: CreditCard) => {
-    setEditingCard(c); setEditCardName(c.name)
-    setEditCardDigits(c.lastFourDigits ?? ''); setEditCardType(c.type)
-    setOpenModal('editCreditCard')
-  }
-
-  const openCreateGroup = () => {
-    setEditingGroup(null); setGroupName(''); setGroupIdeal(''); setGroupCategoryIds([])
-    setOpenModal('createGroup')
-  }
-
-  const openEditGroup = (g: CategoryGroup) => {
-    setEditingGroup(g)
-    setGroupName(g.name)
-    setGroupIdeal(g.monthlyIdeal ? String(Math.round(g.monthlyIdeal)) : '')
-    setGroupCategoryIds([...(g.categoryIds || [])])
-    setOpenModal('editGroup')
-  }
-
-  /* ── Handlers categorías ── */
-  const handleAddCategory = async () => {
-    if (!categoryName.trim()) return
-    setIsSubmitting(true)
-    try {
-      const created = await categoriesService.create(categoryName.trim())
-      setCategories((prev) => [...prev, created])
-      toast.success('Categoría agregada'); closeModal()
-    } catch { toast.error('Error al agregar categoría')
-    } finally { setIsSubmitting(false) }
-  }
-
-  const handleEditCategoryName = async () => {
-    if (!editingCategory || !editCategoryName.trim()) return
-    setIsSubmitting(true)
-    try {
-      const updated = await categoriesService.update(editingCategory.id, editCategoryName.trim())
-      setCategories((prev) => prev.map((c) => c.id === updated.id ? updated : c))
-      toast.success('Categoría actualizada'); closeModal()
-    } catch { toast.error('Error al actualizar categoría')
-    } finally { setIsSubmitting(false) }
-  }
-
-  const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null)
-  const [deletingCardId, setDeletingCardId] = useState<number | null>(null)
-
-  const handleDeleteCategory = async (id: number) => {
-    setDeletingCategoryId(id)
-    try {
-      await categoriesService.delete(id)
-      setCategories((prev) => prev.filter((c) => c.id !== id))
-      toast.success('Categoría eliminada')
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Error al eliminar categoría')
-    } finally { setDeletingCategoryId(null) }
-  }
-
-  /* ── Handlers tarjetas ── */
-  const handleAddCard = async () => {
-    if (!cardName.trim()) return
-    if (showDigitsForType(cardType) && cardDigits.length > 0 && cardDigits.length !== 4) {
-      toast.error('Los dígitos deben ser exactamente 4'); return
-    }
-    setIsSubmitting(true)
-    try {
-      const digits = showDigitsForType(cardType) && cardDigits.length === 4 ? cardDigits : undefined
-      const created = await creditCardsService.create(cardName.trim(), cardType, digits)
-      setCreditCards((prev) => [...prev, created])
-      toast.success('Método de pago agregado'); closeModal()
-    } catch { toast.error('Error al agregar método de pago')
-    } finally { setIsSubmitting(false) }
-  }
-
-  const handleEditCard = async () => {
-    if (!editingCard || !editCardName.trim()) return
-    if (showDigitsForType(editCardType) && editCardDigits.length > 0 && editCardDigits.length !== 4) {
-      toast.error('Los dígitos deben ser exactamente 4'); return
-    }
-    setIsSubmitting(true)
-    try {
-      const digits = showDigitsForType(editCardType) && editCardDigits.length === 4 ? editCardDigits : undefined
-      const updated = await creditCardsService.update(editingCard.id, editCardName.trim(), editCardType, digits)
-      setCreditCards((prev) => prev.map((c) => c.id === updated.id ? updated : c))
-      toast.success('Método de pago actualizado'); closeModal()
-    } catch { toast.error('Error al actualizar método de pago')
-    } finally { setIsSubmitting(false) }
-  }
-
-  const handleDeleteCard = async (id: number) => {
-    setDeletingCardId(id)
-    try {
-      await creditCardsService.delete(id)
-      setCreditCards((prev) => prev.filter((c) => c.id !== id))
-      toast.success('Método de pago eliminado')
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Error al eliminar método de pago')
-    } finally { setDeletingCardId(null) }
-  }
-
-  /* ── Handler años ── */
-  const handleAddYear = async () => {
-    const year = parseInt(yearValue)
-    if (!year || year < 2000 || year > 2100) return
-    setIsSubmitting(true)
-    try {
-      const created = await fiscalYearsService.create(year)
-      setFiscalYears((prev) => [...prev, created].sort((a, b) => b.year - a.year))
-      toast.success(`Año ${year} agregado`); closeModal()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Error al agregar año')
-    } finally { setIsSubmitting(false) }
-  }
-
-  /* ── Handlers grupos ── */
-  const toggleGroupCategory = (categoryId: number) => {
-    setGroupCategoryIds((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
-    )
-  }
-
+  /* ── Handlers Grupos ── */
   const handleSaveGroup = async () => {
-    if (!groupName.trim()) return
+    if (!modalData.groupName.trim()) return
     setIsSubmitting(true)
-    const idealVal = parseInt(groupIdeal) || 0
+    const ideal = parseInt(modalData.groupIdeal.replace(/\D/g, '')) || 0
     try {
-        if (editingGroup) {
-            const updated = await categoryGroupsService.update(editingGroup.id, groupName.trim(), groupCategoryIds, idealVal > 0 ? idealVal : undefined)
-            setGroups((prev) => Array.isArray(prev) ? prev.map(g => g.id === updated.id ? updated : g) : [updated])
-            toast.success('Grupo actualizado')
-        } else {
-            const created = await categoryGroupsService.create(groupName.trim(), groupCategoryIds, idealVal > 0 ? idealVal : undefined)
-            setGroups((prev) => Array.isArray(prev) ? [...prev, created] : [created])
-            toast.success('Grupo creado')
-        }
-        closeModal()
-    } catch {
-        toast.error('Error al guardar grupo')
-    } finally {
-        setIsSubmitting(false)
-    }
+      if (editingItem) {
+        const u = await categoryGroupsService.update(editingItem.id, modalData.groupName, editingItem.categoryIds, ideal > 0 ? ideal : undefined)
+        setGroups(prev => prev.map(g => g.id === u.id ? u : g))
+        toast.success('Grupo actualizado')
+      } else {
+        const c = await categoryGroupsService.create(modalData.groupName, [], ideal > 0 ? ideal : undefined)
+        setGroups(prev => [...prev, c])
+        toast.success('Grupo creado')
+      }
+      closeModal()
+    } catch { toast.error('Error al guardar grupo') } finally { setIsSubmitting(false) }
   }
 
   const handleDeleteGroup = async (id: number) => {
     try {
-        await categoryGroupsService.delete(id)
-        setGroups((prev) => prev.filter((g) => g.id !== id))
-        toast.success('Grupo eliminado')
-    } catch {
-        toast.error('Error al eliminar grupo')
-    }
+      await categoryGroupsService.delete(id)
+      setGroups(prev => prev.filter(g => g.id !== id))
+      // Refetch categories because they might have been moved
+      categoriesService.getAll().then(setCategories)
+      categoryGroupsService.getAll().then(setGroups)
+      toast.success('Grupo eliminado')
+    } catch { toast.error('Error al eliminar grupo') }
   }
 
-  // Categorías disponibles para agregar a un grupo (no en otros grupos, o las del grupo que se está editando)
-  const categoriesForGroupModal = () => {
-    return categories.filter((c) => !c.isSystem && (
-      !assignedCategoryIds.includes(c.id) ||
-      (editingGroup?.categoryIds?.includes(c.id))
-    ))
+  /* ── Handlers Categorias ── */
+  const handleSaveCategory = async () => {
+    if (!modalData.categoryName.trim()) return
+    setIsSubmitting(true)
+    try {
+      if (editingItem) {
+        const u = await categoriesService.update(editingItem.id, modalData.categoryName, editingItem.categoryGroupId)
+        setCategories(prev => prev.map(c => c.id === u.id ? u : c))
+        toast.success('Categoría actualizada')
+      } else {
+        const c = await categoriesService.create(modalData.categoryName, modalData.groupId)
+        setCategories(prev => [...prev, c])
+        toast.success('Categoría creada')
+      }
+      closeModal()
+    } catch { toast.error('Error al guardar categoría') } finally { setIsSubmitting(false) }
+  }
+
+  const handleDeleteCategory = async (id: number) => {
+    setDeletingId(id)
+    try {
+      await categoriesService.delete(id)
+      setCategories(prev => prev.filter(c => c.id !== id))
+      toast.success('Categoría eliminada')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Error al eliminar')
+    } finally { setDeletingId(null) }
+  }
+
+  /* ── Handlers Otros ── */
+  const handleAddYear = async () => {
+    const y = parseInt(modalData.yearValue)
+    if (!y || y < 2000) return
+    setIsSubmitting(true)
+    try {
+      const c = await fiscalYearsService.create(y)
+      setFiscalYears(prev => [...prev, c].sort((a,b)=>b.year-a.year))
+      toast.success('Año agregado'); closeModal()
+    } catch { toast.error('Error') } finally { setIsSubmitting(false) }
+  }
+
+  const handleSaveCard = async () => {
+    if (!modalData.cardName.trim()) return
+    setIsSubmitting(true)
+    try {
+        if (editingItem) {
+            const u = await creditCardsService.update(editingItem.id, modalData.cardName, modalData.cardType, modalData.cardDigits || undefined)
+            setCreditCards(prev => prev.map(c => c.id === u.id ? u : c))
+        } else {
+            const c = await creditCardsService.create(modalData.cardName, modalData.cardType, modalData.cardDigits || undefined)
+            setCreditCards(prev => [...prev, c])
+        }
+        toast.success('Guardado'); closeModal()
+    } catch { toast.error('Error') } finally { setIsSubmitting(false) }
   }
 
   return (
     <BaseLayout titleHeader='Configuración'>
-      <p className='text-sm text-text-muted -mt-2 mb-2'>
-        Administra grupos, categorías, métodos de pago y años fiscales.
-      </p>
-
-      <div className='flex flex-col gap-5 max-w-3xl'>
-        {/* ── Grupos de categorías ── */}
+      <div className='flex flex-col gap-6 max-w-4xl'>
+        
+        {/* ── GRUPOS Y CATEGORIAS ANIDADAS ── */}
         <Section
-          icon={Layers}
-          title='Grupos de análisis'
-          subtitle='Define límites de gasto por grupos de categorías'
-          onAdd={openCreateGroup}
-          addLabel='Nuevo grupo'
-          isEmpty={!Array.isArray(groups) || groups.length === 0}
-          emptyText='Sin grupos. Los grupos permiten definir presupuestos combinados.'
+            icon={Layers}
+            title='Grupos y Categorías'
+            subtitle='Toda categoría debe pertenecer a un grupo de análisis.'
+            onAdd={() => setOpenModal('createGroup')}
+            addLabel='Nuevo Grupo'
+            isEmpty={groups.length === 0}
+            emptyText='No hay grupos. Crea uno para empezar a organizar tus gastos.'
         >
-          {Array.isArray(groups) && groups.map((g) => (
-            <GroupCard
-              key={g.id}
-              group={g}
-              categories={categories}
-              onEdit={openEditGroup}
-              onDelete={handleDeleteGroup}
-            />
-          ))}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-2'>
+                {groups.map(g => (
+                    <GroupCard
+                        key={g.id}
+                        group={g}
+                        categories={categories}
+                        onEdit={(it) => { setEditingItem(it); setModalData({ ...modalData, groupName: it.name, groupIdeal: it.monthlyIdeal ? String(it.monthlyIdeal) : '' }); setOpenModal('editGroup') }}
+                        onDelete={handleDeleteGroup}
+                        onAddCategory={(gid) => { setModalData({ ...modalData, groupId: gid }); setOpenModal('category') }}
+                        onEditCategory={(c) => { setEditingItem(c); setModalData({ ...modalData, categoryName: c.name }); setOpenModal('editCategory') }}
+                        onDeleteCategory={handleDeleteCategory}
+                        deletingId={deletingId}
+                    />
+                ))}
+            </div>
         </Section>
 
-        {/* ── Categorías ── */}
-        <Section
-          icon={Tag}
-          title='Categorías individuales'
-          subtitle='Gestiona tus etiquetas de gasto'
-          onAdd={() => setOpenModal('category')}
-          addLabel='Añadir'
-          isEmpty={categories.length === 0}
-          emptyText='Sin categorías'
-        >
-          {categories.map((c) => (
-            <ItemRow
-              key={c.id}
-              label={c.name}
-              onEdit={() => openEditCategory(c)}
-              onDelete={c.isSystem ? undefined : () => handleDeleteCategory(c.id)}
-              deleteWarning='¿Confirmar? Se desvinculará de sus registros.'
-              isDeleting={deletingCategoryId === c.id}
-            />
-          ))}
-        </Section>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+            {/* ── METODOS PAGO ── */}
+            <Section icon={CreditCardIcon} title='Métodos de Pago' onAdd={() => setOpenModal('creditCard')} addLabel='Añadir' isEmpty={creditCards.length === 0} emptyText='—'>
+                {creditCards.map(c => (
+                    <ItemRow
+                        key={c.id} label={c.name} sublabel={c.lastFourDigits ? `···· ${c.lastFourDigits}` : PAYMENT_METHOD_LABELS[c.type]}
+                        icon={<PaymentTypeIcon type={c.type} />}
+                        onEdit={() => { setEditingItem(c); setModalData({ ...modalData, cardName: c.name, cardType: c.type, cardDigits: c.lastFourDigits || '' }); setOpenModal('editCreditCard') }}
+                        onDelete={() => handleDeleteCard(c.id)}
+                    />
+                ))}
+            </Section>
 
-        {/* ── Métodos de pago ── */}
-        <Section
-          icon={CreditCardIcon}
-          title='Métodos de Pago'
-          onAdd={() => setOpenModal('creditCard')}
-          addLabel='Añadir'
-          isEmpty={creditCards.length === 0}
-          emptyText='Sin métodos de pago'
-        >
-          {creditCards.map((c) => (
-            <ItemRow
-              key={c.id}
-              label={c.name}
-              sublabel={c.lastFourDigits ? `···· ${c.lastFourDigits}` : PAYMENT_METHOD_LABELS[c.type]}
-              icon={<PaymentTypeIcon type={c.type} size={13} />}
-              onEdit={() => openEditCard(c)}
-              onDelete={() => handleDeleteCard(c.id)}
-              deleteWarning='¿Confirmar? Se desvinculará de sus registros.'
-              isDeleting={deletingCardId === c.id}
-            />
-          ))}
-        </Section>
+            {/* ── ANOS ── */}
+            <Section icon={CalendarDays} title='Años Fiscales' onAdd={() => setOpenModal('year')} addLabel='Añadir' isEmpty={fiscalYears.length === 0} emptyText='—'>
+                {fiscalYears.map(f => <ItemRow key={f.id} label={String(f.year)} />)}
+            </Section>
+        </div>
 
-        {/* ── Años ── */}
-        <Section
-          icon={CalendarDays}
-          title='Años Fiscales'
-          onAdd={() => setOpenModal('year')}
-          addLabel='Añadir año'
-          isEmpty={fiscalYears.length === 0}
-          emptyText='Sin años'
-        >
-          {fiscalYears.map((f) => (
-            <ItemRow key={f.id} label={String(f.year)} />
-          ))}
-        </Section>
       </div>
 
-      {/* ── Modales ── */}
       <AnimatePresence>
-        {openModal === 'category' && (
-          <Modal title='Nueva categoría' onClose={closeModal}>
-            <div className='flex flex-col gap-4'>
-              <ModalInput label='Nombre' value={categoryName} onChange={setCategoryName} placeholder='Ej: Alimentación' />
-              <button
-                onClick={handleAddCategory}
-                disabled={isSubmitting || !categoryName.trim()}
-                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar categoría'}
-              </button>
-            </div>
-          </Modal>
+        {/* MODAL CATEGORIA */}
+        {(openModal === 'category' || openModal === 'editCategory') && (
+            <Modal title={editingItem ? 'Editar categoría' : 'Nueva categoría'} onClose={closeModal}>
+                <div className='flex flex-col gap-4'>
+                    <ModalInput label='Nombre' value={modalData.categoryName} onChange={v => setModalData({...modalData, categoryName: v})} placeholder='Ej: Netflix' />
+                    <button onClick={handleSaveCategory} disabled={isSubmitting || !modalData.categoryName.trim()} className='w-full h-10 bg-text-main text-white font-semibold rounded-xl hover:bg-secondary-800 transition-colors'>
+                        {isSubmitting ? 'Guardando...' : 'Guardar categoría'}
+                    </button>
+                </div>
+            </Modal>
         )}
 
-        {openModal === 'creditCard' && (
-          <Modal title='Nuevo método de pago' onClose={closeModal}>
-            <div className='flex flex-col gap-4'>
-              <PaymentTypeSelector value={cardType} onChange={(v) => { setCardType(v); setCardDigits('') }} />
-              <ModalInput
-                label='Nombre' value={cardName} onChange={setCardName}
-                placeholder={cardType === 'Card' ? 'Ej: Visa Oro' : cardType === 'BankAccount' ? 'Ej: Bancolombia' : cardType === 'DigitalWallet' ? 'Ej: Nequi' : 'Efectivo'}
-              />
-              {showDigitsForType(cardType) && (
-                <ModalInput
-                  label='Últimos 4 dígitos (opcional)'
-                  value={cardDigits}
-                  onChange={(v) => setCardDigits(v.replace(/\D/g, '').slice(0, 4))}
-                  placeholder='0000' maxLength={4}
-                />
-              )}
-              <button
-                onClick={handleAddCard}
-                disabled={isSubmitting || !cardName.trim()}
-                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar método de pago'}
-              </button>
-            </div>
-          </Modal>
-        )}
-
-        {openModal === 'year' && (
-          <Modal title='Añadir año fiscal' onClose={closeModal}>
-            <div className='flex flex-col gap-4'>
-              <ModalInput label='Año' value={yearValue} onChange={setYearValue} placeholder='2025' type='number' />
-              <button
-                onClick={handleAddYear}
-                disabled={isSubmitting || !yearValue}
-                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {isSubmitting ? 'Guardando...' : 'Añadir año'}
-              </button>
-            </div>
-          </Modal>
-        )}
-
-        {openModal === 'editCategory' && editingCategory && (
-          <Modal title='Editar categoría' onClose={closeModal}>
-            <div className='flex flex-col gap-4'>
-              <ModalInput label='Nombre' value={editCategoryName} onChange={setEditCategoryName} placeholder='Ej: Alimentación' />
-              <button
-                onClick={handleEditCategoryName}
-                disabled={isSubmitting || !editCategoryName.trim()}
-                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-            </div>
-          </Modal>
-        )}
-
-        {openModal === 'editCreditCard' && editingCard && (
-          <Modal title='Editar método de pago' onClose={closeModal}>
-            <div className='flex flex-col gap-4'>
-              <PaymentTypeSelector value={editCardType} onChange={(v) => { setEditCardType(v); setEditCardDigits('') }} />
-              <ModalInput label='Nombre' value={editCardName} onChange={setEditCardName} placeholder='Ej: Visa Oro' />
-              {showDigitsForType(editCardType) && (
-                <ModalInput
-                  label='Últimos 4 dígitos (opcional)'
-                  value={editCardDigits}
-                  onChange={(v) => setEditCardDigits(v.replace(/\D/g, '').slice(0, 4))}
-                  placeholder='0000' maxLength={4}
-                />
-              )}
-              <button
-                onClick={handleEditCard}
-                disabled={isSubmitting || !editCardName.trim()}
-                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-            </div>
-          </Modal>
-        )}
-
+        {/* MODAL GRUPO */}
         {(openModal === 'createGroup' || openModal === 'editGroup') && (
-          <Modal
-            title={openModal === 'editGroup' ? 'Editar grupo' : 'Nuevo grupo'}
-            onClose={closeModal}
-          >
-            <div className='flex flex-col gap-4'>
-              <ModalInput
-                label='Nombre del grupo'
-                value={groupName}
-                onChange={setGroupName}
-                placeholder='Ej: Hogar, Servicios, Ocio...'
-              />
-              <div className='flex flex-col gap-1.5'>
-                <label className='text-sm font-medium text-text-main'>Ideal mensual del grupo</label>
-                <div className='relative'>
-                    <input
-                        type='text'
-                        value={groupIdeal ? new Intl.NumberFormat('es-CO').format(parseInt(groupIdeal) || 0) : ''}
-                        onChange={(e) => setGroupIdeal(e.target.value.replace(/\D/g, ''))}
-                        className='h-10 w-full rounded-xl border border-secondary-200 pl-3 pr-10 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
-                        placeholder='0'
-                    />
-                    <Target size={14} className='absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400' />
+            <Modal title={editingItem ? 'Editar grupo' : 'Nuevo grupo'} onClose={closeModal}>
+                <div className='flex flex-col gap-4'>
+                    <ModalInput label='Nombre del grupo' value={modalData.groupName} onChange={v => setModalData({...modalData, groupName: v})} placeholder='Ej: Ocio' />
+                    <div className='flex flex-col gap-1.5'>
+                        <label className='text-sm font-medium'>Ideal mensual</label>
+                        <div className='relative'>
+                            <input
+                                type='text' value={modalData.groupIdeal ? fmt(parseInt(modalData.groupIdeal.replace(/\D/g, '')) || 0) : ''}
+                                onChange={e => setModalData({...modalData, groupIdeal: e.target.value.replace(/\D/g,'')})}
+                                className='h-10 w-full rounded-xl border border-secondary-200 pl-3 pr-10 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
+                                placeholder='$ 0'
+                            />
+                            <Target size={14} className='absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400' />
+                        </div>
+                    </div>
+                    <button onClick={handleSaveGroup} disabled={isSubmitting || !modalData.groupName.trim()} className='w-full h-10 bg-text-main text-white font-semibold rounded-xl hover:bg-secondary-800 transition-colors'>
+                        {isSubmitting ? 'Guardando...' : 'Guardar grupo'}
+                    </button>
                 </div>
-              </div>
-              <div className='flex flex-col gap-2'>
-                <label className='text-sm font-medium text-text-main'>
-                  Categorías incluidas
-                  <span className='text-xs font-normal text-text-muted ml-1'>(solo las no asignadas)</span>
-                </label>
-                <div className='max-h-52 overflow-y-auto flex flex-col gap-0.5 pr-1'>
-                  {categoriesForGroupModal().length === 0 ? (
-                    <p className='text-xs text-text-muted py-3 px-2 italic'>
-                      No hay más categorías disponibles para asignar.
-                    </p>
-                  ) : (
-                    categoriesForGroupModal().map((c) => (
-                      <label
-                        key={c.id}
-                        className='flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-secondary-50 cursor-pointer transition-colors'
-                      >
-                        <input
-                          type='checkbox'
-                          checked={groupCategoryIds.includes(c.id)}
-                          onChange={() => toggleGroupCategory(c.id)}
-                          className='w-4 h-4 rounded accent-primary'
-                        />
-                        <span className='text-sm text-text-main'>{c.name}</span>
-                      </label>
-                    ))
-                  )}
+            </Modal>
+        )}
+
+        {/* OTROS MODALES SIMPLIFICADOS */}
+        {openModal === 'year' && (
+            <Modal title='Añadir año' onClose={closeModal}>
+                <div className='flex flex-col gap-4'>
+                    <ModalInput label='Año' value={modalData.yearValue} onChange={v => setModalData({...modalData, yearValue: v})} type='number' />
+                    <button onClick={handleAddYear} className='w-full h-10 bg-text-main text-white font-semibold rounded-xl hover:bg-secondary-800'>Añadir</button>
                 </div>
+            </Modal>
+        )}
+
+        {(openModal === 'creditCard' || openModal === 'editCreditCard') && (
+            <Modal title='Método de pago' onClose={closeModal}>
+              <div className='flex flex-col gap-4'>
+                <PaymentTypeSelector value={modalData.cardType} onChange={v => setModalData({...modalData, cardType: v, cardDigits: ''})} />
+                <ModalInput label='Nombre' value={modalData.cardName} onChange={v => setModalData({...modalData, cardName: v})} />
+                {showDigitsForType(modalData.cardType) && (
+                    <ModalInput label='4 dígitos' value={modalData.cardDigits} onChange={v => setModalData({...modalData, cardDigits: v.replace(/\D/g,'').slice(0,4)})} maxLength={4} />
+                )}
+                <button onClick={handleSaveCard} className='w-full h-10 bg-text-main text-white font-semibold rounded-xl'>Guardar</button>
               </div>
-              <button
-                onClick={handleSaveGroup}
-                disabled={isSubmitting || !groupName.trim()}
-                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {isSubmitting ? 'Guardando...' : (openModal === 'editGroup' ? 'Guardar cambios' : 'Crear grupo')}
-              </button>
-            </div>
-          </Modal>
+            </Modal>
         )}
       </AnimatePresence>
     </BaseLayout>

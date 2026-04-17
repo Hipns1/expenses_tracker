@@ -6,6 +6,7 @@ import { categoriesService, type Category } from '@/services/categories'
 import { creditCardsService, type CreditCard } from '@/services/creditCards'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { recurringExpensesService, type RecurringExpense, type CreateRecurringExpensePayload } from '@/services/recurringExpenses'
+import { categoryGroupsService, type CategoryGroup } from '@/services/categoryGroups'
 import { recordsService } from '@/services/records'
 import { toast } from 'react-toastify'
 
@@ -186,6 +187,7 @@ function ExpenseRow({
 export default function Recurrentes() {
   const [expenses, setExpenses] = useState<RecurringExpense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [groups, setGroups] = useState<CategoryGroup[]>([])
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [loading, setLoading] = useState(true)
@@ -215,9 +217,11 @@ export default function Recurrentes() {
       categoriesService.getAll(),
       fiscalYearsService.getAll(),
       creditCardsService.getAll(),
-    ]).then(([exp, cats, years, cards]) => {
+      categoryGroupsService.getAll(),
+    ]).then(([exp, cats, years, cards, grp]) => {
       setExpenses(exp)
       setCategories(cats)
+      setGroups(grp || [])
       const sorted = [...years].sort((a, b) => b.year - a.year)
       setFiscalYears(sorted)
       if (sorted.length > 0) setRegYearId(String(sorted[0].id))
@@ -432,7 +436,14 @@ export default function Recurrentes() {
                   className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
                 >
                   <option value=''>Sin categoría</option>
-                  {categories.map((c) => (
+                  {groups.map((g) => (
+                    <optgroup key={g.id} label={g.name}>
+                        {categories.filter(c => c.categoryGroupId === g.id).map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </optgroup>
+                  ))}
+                  {categories.filter(c => !groups.some(g => g.id === c.categoryGroupId)).map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
