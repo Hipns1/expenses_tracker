@@ -478,6 +478,7 @@ export default function Configuracion() {
               onEdit={() => openEditCard(c)}
               onDelete={() => handleDeleteCard(c.id)}
               deleteWarning='¿Confirmar? Los registros con este método de pago lo perderán.'
+              isDeleting={deletingCardId === c.id}
             />
           ))}
         </Section>
