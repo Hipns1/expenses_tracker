@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { fiscalYearsService } from '@/services/fiscalYears'
 import { categoriesService } from '@/services/categories'
 import { creditCardsService, type PaymentMethodType } from '@/services/creditCards'
+import { categoryGroupsService } from '@/services/categoryGroups'
 import { toast } from 'react-toastify'
 
 interface OnboardingModalProps {
@@ -88,13 +89,18 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
         await fiscalYearsService.create(parsed)
       }
 
-      if (step.id === 'category') {
-        if (!categoryName.trim()) {
-          toast.error('Ingresa un nombre de categoría')
-          return
+        if (step.id === 'category') {
+          if (!categoryName.trim()) {
+            toast.error('Ingresa un nombre de categoría')
+            return
+          }
+          // Crear un grupo "General" por defecto para esta categoría inicial
+          let generalGroup = (await categoryGroupsService.getAll()).find(g => g.name === 'General')
+          if (!generalGroup) {
+            generalGroup = await categoryGroupsService.create('General', [])
+          }
+          await categoriesService.create(categoryName.trim(), generalGroup.id)
         }
-        await categoriesService.create(categoryName.trim())
-      }
 
       if (step.id === 'card') {
         if (!cardName.trim()) {

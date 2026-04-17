@@ -8,7 +8,7 @@ import { toast } from 'react-toastify'
 import {
   Plus, Trash2, CreditCard as CreditCardIcon, CalendarDays, X,
   CheckCircle, Pencil, Building2, Smartphone, Banknote, Loader2,
-  Layers, Target, ChevronDown, ChevronRight, Tags
+  Layers, Target, ChevronDown, ChevronRight
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -310,12 +310,13 @@ function GroupCard({ group, categories, onEdit, onDelete, onAddCategory, onEditC
 }
 
 /* ── Input simple ── */
-function ModalInput({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+function ModalInput({ label, value, onChange, placeholder, type = 'text', maxLength }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; maxLength?: number }) {
   return (
     <div className='flex flex-col gap-1.5'>
       <label className='text-sm font-medium text-text-main'>{label}</label>
       <input
         type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        maxLength={maxLength}
         className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
       />
     </div>
@@ -449,6 +450,14 @@ export default function Configuracion() {
         }
         toast.success('Guardado'); closeModal()
     } catch { toast.error('Error') } finally { setIsSubmitting(false) }
+  }
+
+  const handleDeleteCard = async (id: number) => {
+    try {
+      await creditCardsService.delete(id)
+      setCreditCards(prev => prev.filter(c => c.id !== id))
+      toast.success('Método eliminado')
+    } catch { toast.error('Error al prevenir orfanato') }
   }
 
   return (
