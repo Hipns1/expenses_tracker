@@ -31,6 +31,7 @@ export interface Record {
     description?: string
     fiscalYearId: number
     isLoan?: boolean
+    isDebt?: boolean
     category?: Category | null
     creditCard?: RecordCreditCard | null
     items: RecordItem[]

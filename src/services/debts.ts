@@ -40,6 +40,9 @@ export const debtsService = {
     async addPayment(debtId: number, amount: number, month: number, year: number, note?: string): Promise<Debt> {
         return await apiConfig.post(`/Debts/${debtId}/payments`, { amount, month, year, note }) as unknown as Debt
     },
+    async updatePayment(debtId: number, paymentId: number, amount: number, month: number, year: number, note?: string): Promise<Debt> {
+        return await apiConfig.put(`/Debts/${debtId}/payments/${paymentId}`, { amount, month, year, note }) as unknown as Debt
+    },
     async deletePayment(debtId: number, paymentId: number): Promise<Debt> {
         return await apiConfig.delete(`/Debts/${debtId}/payments/${paymentId}`) as unknown as Debt
     },

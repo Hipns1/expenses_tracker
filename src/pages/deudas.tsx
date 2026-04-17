@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Landmark, Plus, Trash2, ChevronDown, ChevronUp,
-  CheckCircle, CircleDollarSign, Clock, X, TrendingDown
+  CheckCircle, CircleDollarSign, Clock, X, TrendingDown, Pencil
 } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
-import { debtsService, type Debt } from '@/services/debts'
+import { debtsService, type Debt, type DebtPayment } from '@/services/debts'
 import { toast } from 'react-toastify'
 
 /* ── Input de moneda ── */
@@ -112,11 +112,13 @@ function SummaryCard({ label, value, icon: Icon, color }: { label: string; value
 function DebtCard({
   debt,
   onAddPayment,
+  onEditPayment,
   onDelete,
   onDeletePayment,
 }: {
   debt: Debt
   onAddPayment: (d: Debt) => void
+  onEditPayment: (debt: Debt, payment: DebtPayment) => void
   onDelete: (id: number) => void
   onDeletePayment: (debt: Debt, paymentId: number) => void
 }) {
@@ -244,13 +246,22 @@ function DebtCard({
                     </span>
                     {p.note && <span className='text-xs text-text-muted ml-1'>· {p.note}</span>}
                   </div>
-                  <button
-                    onClick={() => onDeletePayment(debt, p.id)}
-                    className='w-6 h-6 flex items-center justify-center rounded-lg text-danger hover:bg-danger/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0'
-                    title='Eliminar pago'
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0'>
+                    <button
+                      onClick={() => onEditPayment(debt, p)}
+                      className='w-6 h-6 flex items-center justify-center rounded-lg text-primary hover:bg-primary/10'
+                      title='Editar pago'
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      onClick={() => onDeletePayment(debt, p.id)}
+                      className='w-6 h-6 flex items-center justify-center rounded-lg text-danger hover:bg-danger/10'
+                      title='Eliminar pago'
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -277,6 +288,12 @@ export default function Deudas() {
   const [payMonth, setPayMonth] = useState(String(new Date().getMonth() + 1))
   const [payYear, setPayYear] = useState(String(new Date().getFullYear()))
   const [payNote, setPayNote] = useState('')
+
+  const [editingPayment, setEditingPayment] = useState<{ debt: Debt; payment: DebtPayment } | null>(null)
+  const [editAmount, setEditAmount] = useState('')
+  const [editMonth, setEditMonth] = useState('1')
+  const [editYear, setEditYear] = useState('2025')
+  const [editNote, setEditNote] = useState('')
 
   useEffect(() => {
     debtsService.getAll()
@@ -354,6 +371,44 @@ export default function Deudas() {
     }
   }
 
+  const openEditPayment = (debt: Debt, payment: DebtPayment) => {
+    setEditingPayment({ debt, payment })
+    setEditAmount(String(Math.round(payment.amount)))
+    setEditMonth(String(payment.month))
+    setEditYear(String(payment.year))
+    setEditNote(payment.note ?? '')
+  }
+
+  const closeEditPayment = () => {
+    setEditingPayment(null)
+    setEditAmount(''); setEditMonth('1'); setEditYear('2025'); setEditNote('')
+  }
+
+  const handleUpdatePayment = async () => {
+    if (!editingPayment || !editAmount) return
+    const amount = parseFloat(editAmount)
+    const month  = parseInt(editMonth)
+    const year   = parseInt(editYear)
+    if (isNaN(amount) || amount <= 0) { toast.error('Monto inválido'); return }
+    if (isNaN(year) || year < 2000)   { toast.error('Año inválido'); return }
+    setSubmitting(true)
+    try {
+      const updated = await debtsService.updatePayment(
+        editingPayment.debt.id,
+        editingPayment.payment.id,
+        amount, month, year,
+        editNote.trim() || undefined
+      )
+      setDebts((prev) => prev.map((d) => d.id === updated.id ? updated : d))
+      toast.success('Pago actualizado')
+      closeEditPayment()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Error al actualizar el pago')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleDeletePayment = async (debt: Debt, paymentId: number) => {
     try {
       const updated = await debtsService.deletePayment(debt.id, paymentId)
@@ -400,7 +455,7 @@ export default function Deudas() {
       ) : (
         <div className='flex flex-col gap-3 max-w-2xl'>
           {active.map((debt) => (
-            <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
+            <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onEditPayment={openEditPayment} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
           ))}
           {paid.length > 0 && (
             <>
@@ -408,7 +463,7 @@ export default function Deudas() {
                 <p className='text-xs font-semibold text-text-muted uppercase tracking-wide mt-2'>Pagadas</p>
               )}
               {paid.map((debt) => (
-                <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
+                <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onEditPayment={openEditPayment} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
               ))}
             </>
           )}
@@ -520,6 +575,75 @@ export default function Deudas() {
                 className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
               >
                 {submitting ? 'Guardando...' : 'Registrar pago'}
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {editingPayment && (
+          <Modal title={`Editar pago · ${editingPayment.debt.creditorName}`} onClose={closeEditPayment}>
+            <div className='flex flex-col gap-4'>
+              <div className='bg-secondary-50 rounded-xl px-4 py-3 text-sm'>
+                <div className='flex justify-between'>
+                  <span className='text-text-muted'>Deuda total</span>
+                  <span className='font-medium text-text-main'>{fmt(editingPayment.debt.amount)}</span>
+                </div>
+                <div className='flex justify-between mt-1'>
+                  <span className='text-text-muted'>Máx. para este pago</span>
+                  <span className='font-semibold text-primary'>
+                    {fmt(editingPayment.debt.remaining + editingPayment.payment.amount)}
+                  </span>
+                </div>
+              </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Monto del pago</label>
+                <CurrencyInput
+                  value={editAmount}
+                  onChange={setEditAmount}
+                  placeholder='0'
+                  className='h-10 rounded-xl border border-secondary-200 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                />
+              </div>
+              <div className='flex gap-3'>
+                <div className='flex flex-col gap-1.5 flex-1'>
+                  <label className='text-sm font-medium text-text-main'>Mes</label>
+                  <select
+                    value={editMonth}
+                    onChange={(e) => setEditMonth(e.target.value)}
+                    className='h-10 rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                  >
+                    {MONTHS.map((m, i) => (
+                      <option key={i} value={i + 1}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className='flex flex-col gap-1.5 w-24'>
+                  <label className='text-sm font-medium text-text-main'>Año</label>
+                  <input
+                    type='number'
+                    value={editYear}
+                    onChange={(e) => setEditYear(e.target.value)}
+                    min={2000}
+                    max={2100}
+                    className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                  />
+                </div>
+              </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-sm font-medium text-text-main'>Nota <span className='text-text-muted font-normal'>(opcional)</span></label>
+                <input
+                  value={editNote}
+                  onChange={(e) => setEditNote(e.target.value)}
+                  placeholder='Ej: Cuota 1'
+                  className='h-10 w-full rounded-xl border border-secondary-200 px-3 text-sm text-text-main placeholder:text-secondary-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
+                />
+              </div>
+              <button
+                onClick={handleUpdatePayment}
+                disabled={submitting || !editAmount}
+                className='w-full h-10 bg-text-main text-white text-sm font-semibold rounded-xl hover:bg-secondary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+              >
+                {submitting ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </Modal>

@@ -655,6 +655,7 @@ export default function Registros() {
   const RecordRow = ({ record }: { record: FinanceRecord }) => {
     const income = isIncome(record.type)
     const isLoan = record.isLoan === true
+    const isDebt = record.isDebt === true
     return (
       <motion.div
         layout
@@ -701,7 +702,7 @@ export default function Registros() {
           -{formatCurrency(record.amount)}
         </span>
 
-        {!isLoan && (
+        {!isLoan && !isDebt && (
           <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
             <button
               onClick={() => openEdit(record)}
