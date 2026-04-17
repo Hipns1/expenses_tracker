@@ -391,7 +391,9 @@ function GroupCard({ group, categories, onEdit, onDelete }: {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // Categorías que pertenecen a este grupo
-  const assignedCats = categories.filter((c) => group.categoryIds.includes(c.id))
+  const assignedCats = Array.isArray(group.categoryIds) 
+    ? categories.filter((c) => group.categoryIds.includes(c.id))
+    : []
 
   const handleDeleteClick = () => {
     if (!confirmDelete) {
@@ -521,7 +523,7 @@ export default function Configuracion() {
   }
 
   const openEditGroup = (g: CategoryGroup) => {
-    setEditingGroup(g); setGroupName(g.name); setGroupCategoryIds([...g.categoryIds])
+    setEditingGroup(g); setGroupName(g.name); setGroupCategoryIds([...(g.categoryIds || [])])
     setOpenModal('editGroup')
   }
 

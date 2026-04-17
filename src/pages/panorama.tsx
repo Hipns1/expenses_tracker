@@ -172,7 +172,7 @@ function GroupAnalysisCard({ group, amount, ideal, income, categories, ideals, c
       </div>
       {expanded && (
         <div className='border-t border-secondary-50 px-4 py-3 space-y-3 bg-secondary-50/40'>
-          {group.categoryIds.map((cid) => {
+          {Array.isArray(group.categoryIds) && group.categoryIds.map((cid) => {
             const catAmt = catMonths(cid)
             if (catAmt === 0 && !(catAnnual[cid] ?? 0)) return null
             return (
@@ -286,7 +286,8 @@ export default function Panorama() {
 
   /* ── Helpers de consulta ── */
   const getCatMonth = (cid: number, idx: number) => monthlyData[idx]?.expenses[cid] ?? 0
-  const getGroupMonth = (g: CategoryGroup, idx: number) => g.categoryIds.reduce((s, cid) => s + getCatMonth(cid, idx), 0)
+  const getGroupMonth = (g: CategoryGroup, idx: number) => 
+    Array.isArray(g.categoryIds) ? g.categoryIds.reduce((s, cid) => s + getCatMonth(cid, idx), 0) : 0
   const getMonthIncome = (idx: number) => monthlyData[idx].incomeNormal + monthlyData[idx].incomeBonus
   const getMonthExpenses = (idx: number) => Object.values(monthlyData[idx].expenses).reduce((s, v) => s + v, 0)
 
@@ -313,10 +314,11 @@ export default function Panorama() {
   const annualExpenses = useMemo(() => monthlyData.reduce((s, d) => s + Object.values(d.expenses).reduce((ss, v) => ss + v, 0), 0), [monthlyData])
   const annualSavings = annualIncome - annualExpenses
 
-  const getGroupIdeal = (g: CategoryGroup) => g.categoryIds.reduce((s, cid) => {
-    const c = categories.find(cat => cat.id === cid)
-    return s + (c?.monthlyIdeal ?? 0)
-  }, 0)
+  const getGroupIdeal = (g: CategoryGroup) => 
+    Array.isArray(g.categoryIds) ? g.categoryIds.reduce((s, cid) => {
+      const c = categories.find(cat => cat.id === cid)
+      return s + (c?.monthlyIdeal ?? 0)
+    }, 0) : 0
   const hasUncategorized = monthlyData.some((d) => (d.expenses[-1] ?? 0) > 0)
 
   /* ── Datos para análisis % ── */
@@ -452,8 +454,8 @@ export default function Panorama() {
                 <SectionHeader label='Gastos' color='red' />
 
                 {/* Grupos */}
-                {groups.map((g) => {
-                  const groupCats = g.categoryIds.filter((cid) => activeCatIds.has(cid))
+                {Array.isArray(groups) && groups.map((g) => {
+                  const groupCats = Array.isArray(g.categoryIds) ? g.categoryIds.filter((cid) => activeCatIds.has(cid)) : []
                   if (groupCats.length === 0 && !groupAnnual[g.id]) return null
                   return (
                     <React.Fragment key={g.id}>
