@@ -373,11 +373,11 @@ export default function Configuracion() {
     const ideal = parseInt(modalData.groupIdeal.replace(/\D/g, '')) || 0
     try {
       if (editingItem) {
-        const u = await categoryGroupsService.update(editingItem.id, modalData.groupName, editingItem.categoryIds, ideal > 0 ? ideal : undefined)
+        const u = await categoryGroupsService.update(editingItem.id, modalData.groupName, undefined, ideal > 0 ? ideal : undefined)
         setGroups(prev => prev.map(g => g.id === u.id ? u : g))
         toast.success('Grupo actualizado')
       } else {
-        const c = await categoryGroupsService.create(modalData.groupName, [], ideal > 0 ? ideal : undefined)
+        const c = await categoryGroupsService.create(modalData.groupName, undefined, ideal > 0 ? ideal : undefined)
         setGroups(prev => [...prev, c])
         toast.success('Grupo creado')
       }

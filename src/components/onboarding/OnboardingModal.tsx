@@ -97,7 +97,7 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
           // Crear un grupo "General" por defecto para esta categoría inicial
           let generalGroup = (await categoryGroupsService.getAll()).find(g => g.name === 'General')
           if (!generalGroup) {
-            generalGroup = await categoryGroupsService.create('General', [])
+            generalGroup = await categoryGroupsService.create('General')
           }
           await categoriesService.create(categoryName.trim(), generalGroup.id)
         }
