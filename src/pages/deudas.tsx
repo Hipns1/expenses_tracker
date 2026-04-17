@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Landmark, Plus, Trash2, ChevronDown, ChevronUp,
-  CheckCircle, CircleDollarSign, Clock, X, TrendingDown, Pencil
+  CheckCircle, CircleDollarSign, Clock, X, TrendingDown, Pencil, Loader2
 } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { debtsService, type Debt, type DebtPayment } from '@/services/debts'
@@ -115,12 +115,16 @@ function DebtCard({
   onEditPayment,
   onDelete,
   onDeletePayment,
+  isDeleting,
+  deletingPaymentId,
 }: {
   debt: Debt
   onAddPayment: (d: Debt) => void
   onEditPayment: (debt: Debt, payment: DebtPayment) => void
   onDelete: (id: number) => void
   onDeletePayment: (debt: Debt, paymentId: number) => void
+  isDeleting: boolean
+  deletingPaymentId: number | null
 }) {
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -203,12 +207,17 @@ function DebtCard({
           <div className='ml-auto'>
             <button
               onClick={handleDeleteClick}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+              disabled={isDeleting}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
                 confirmDelete ? 'bg-danger text-white' : 'text-danger hover:bg-danger/10'
               }`}
-              title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar deuda'}
+              title={isDeleting ? 'Eliminando…' : confirmDelete ? 'Confirmar eliminación' : 'Eliminar deuda'}
             >
-              {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+              {isDeleting
+                ? <Loader2 size={13} className='animate-spin' />
+                : confirmDelete
+                ? <CheckCircle size={13} />
+                : <Trash2 size={13} />}
             </button>
           </div>
         </div>
@@ -256,10 +265,13 @@ function DebtCard({
                     </button>
                     <button
                       onClick={() => onDeletePayment(debt, p.id)}
-                      className='w-6 h-6 flex items-center justify-center rounded-lg text-danger hover:bg-danger/10'
-                      title='Eliminar pago'
+                      disabled={deletingPaymentId === p.id}
+                      className='w-6 h-6 flex items-center justify-center rounded-lg text-danger hover:bg-danger/10 disabled:opacity-70 disabled:cursor-not-allowed'
+                      title={deletingPaymentId === p.id ? 'Eliminando…' : 'Eliminar pago'}
                     >
-                      <Trash2 size={12} />
+                      {deletingPaymentId === p.id
+                        ? <Loader2 size={12} className='animate-spin' />
+                        : <Trash2 size={12} />}
                     </button>
                   </div>
                 </div>
@@ -361,13 +373,19 @@ export default function Deudas() {
     }
   }
 
+  const [deletingDebtId, setDeletingDebtId] = useState<number | null>(null)
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null)
+
   const handleDelete = async (id: number) => {
+    setDeletingDebtId(id)
     try {
       await debtsService.delete(id)
       setDebts((prev) => prev.filter((d) => d.id !== id))
       toast.success('Deuda eliminada')
     } catch {
       toast.error('Error al eliminar la deuda')
+    } finally {
+      setDeletingDebtId(null)
     }
   }
 
@@ -410,12 +428,15 @@ export default function Deudas() {
   }
 
   const handleDeletePayment = async (debt: Debt, paymentId: number) => {
+    setDeletingPaymentId(paymentId)
     try {
       const updated = await debtsService.deletePayment(debt.id, paymentId)
       setDebts((prev) => prev.map((d) => d.id === updated.id ? updated : d))
       toast.success('Pago eliminado')
     } catch {
       toast.error('Error al eliminar el pago')
+    } finally {
+      setDeletingPaymentId(null)
     }
   }
 
@@ -455,7 +476,7 @@ export default function Deudas() {
       ) : (
         <div className='flex flex-col gap-3 max-w-2xl'>
           {active.map((debt) => (
-            <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onEditPayment={openEditPayment} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
+            <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onEditPayment={openEditPayment} onDelete={handleDelete} onDeletePayment={handleDeletePayment} isDeleting={deletingDebtId === debt.id} deletingPaymentId={deletingPaymentId} />
           ))}
           {paid.length > 0 && (
             <>
@@ -463,7 +484,7 @@ export default function Deudas() {
                 <p className='text-xs font-semibold text-text-muted uppercase tracking-wide mt-2'>Pagadas</p>
               )}
               {paid.map((debt) => (
-                <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onEditPayment={openEditPayment} onDelete={handleDelete} onDeletePayment={handleDeletePayment} />
+                <DebtCard key={debt.id} debt={debt} onAddPayment={setPayingDebt} onEditPayment={openEditPayment} onDelete={handleDelete} onDeletePayment={handleDeletePayment} isDeleting={deletingDebtId === debt.id} deletingPaymentId={deletingPaymentId} />
               ))}
             </>
           )}

@@ -634,6 +634,7 @@ export default function Registros() {
   }
 
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const handleDelete = async (id: number) => {
     if (pendingDeleteId !== id) {
@@ -642,12 +643,15 @@ export default function Registros() {
       return
     }
     setPendingDeleteId(null)
+    setDeletingId(id)
     try {
       await recordsService.delete(id)
       setRecords((prev) => prev.filter((r) => r.id !== id))
       toast.success('Registro eliminado')
     } catch {
       toast.error('Error al eliminar registro')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -712,13 +716,18 @@ export default function Registros() {
             </button>
             <button
               onClick={() => handleDelete(record.id)}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+              disabled={deletingId === record.id}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${
                 pendingDeleteId === record.id
                   ? 'bg-danger text-white'
                   : 'hover:bg-danger/10 text-danger'
               }`}
             >
-              {pendingDeleteId === record.id ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+              {deletingId === record.id
+                ? <Loader2 size={13} className='animate-spin' />
+                : pendingDeleteId === record.id
+                ? <CheckCircle size={13} />
+                : <Trash2 size={13} />}
             </button>
           </div>
         )}

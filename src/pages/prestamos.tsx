@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   HandCoins, Plus, Trash2, ChevronDown, ChevronUp,
-  CheckCircle, CircleDollarSign, Clock, X
+  CheckCircle, CircleDollarSign, Clock, X, Loader2
 } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
@@ -115,11 +115,15 @@ function LoanCard({
   onAddPayment,
   onDelete,
   onDeletePayment,
+  isDeleting,
+  deletingPaymentId,
 }: {
   loan: Loan
   onAddPayment: (loan: Loan) => void
   onDelete: (id: number) => void
   onDeletePayment: (loan: Loan, paymentId: number) => void
+  isDeleting: boolean
+  deletingPaymentId: number | null
 }) {
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -204,14 +208,19 @@ function LoanCard({
           <div className='ml-auto'>
             <button
               onClick={handleDeleteClick}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+              disabled={isDeleting}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
                 confirmDelete
                   ? 'bg-danger text-white'
                   : 'text-danger hover:bg-danger/10'
               }`}
-              title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar préstamo'}
+              title={isDeleting ? 'Eliminando…' : confirmDelete ? 'Confirmar eliminación' : 'Eliminar préstamo'}
             >
-              {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+              {isDeleting
+                ? <Loader2 size={13} className='animate-spin' />
+                : confirmDelete
+                ? <CheckCircle size={13} />
+                : <Trash2 size={13} />}
             </button>
           </div>
         </div>
@@ -251,10 +260,14 @@ function LoanCard({
                   </div>
                   <button
                     onClick={() => onDeletePayment(loan, p.id)}
-                    className='w-6 h-6 flex items-center justify-center rounded-lg text-danger hover:bg-danger/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0'
-                    title='Eliminar pago'
+                    disabled={deletingPaymentId === p.id}
+                    className='w-6 h-6 flex items-center justify-center rounded-lg text-danger hover:bg-danger/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 disabled:opacity-70 disabled:cursor-not-allowed'
+                    title={deletingPaymentId === p.id ? 'Eliminando…' : 'Eliminar pago'}
+                    style={deletingPaymentId === p.id ? { opacity: 1 } : undefined}
                   >
-                    <Trash2 size={12} />
+                    {deletingPaymentId === p.id
+                      ? <Loader2 size={12} className='animate-spin' />
+                      : <Trash2 size={12} />}
                   </button>
                 </div>
               ))}
@@ -372,23 +385,32 @@ export default function Prestamos() {
     }
   }
 
+  const [deletingLoanId, setDeletingLoanId] = useState<number | null>(null)
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null)
+
   const handleDelete = async (id: number) => {
+    setDeletingLoanId(id)
     try {
       await loansService.delete(id)
       setLoans((prev) => prev.filter((l) => l.id !== id))
       toast.success('Préstamo eliminado')
     } catch {
       toast.error('Error al eliminar el préstamo')
+    } finally {
+      setDeletingLoanId(null)
     }
   }
 
   const handleDeletePayment = async (loan: Loan, paymentId: number) => {
+    setDeletingPaymentId(paymentId)
     try {
       const updated = await loansService.deletePayment(loan.id, paymentId)
       setLoans((prev) => prev.map((l) => l.id === updated.id ? updated : l))
       toast.success('Pago eliminado')
     } catch {
       toast.error('Error al eliminar el pago')
+    } finally {
+      setDeletingPaymentId(null)
     }
   }
 
@@ -477,6 +499,8 @@ export default function Prestamos() {
               onAddPayment={setPayingLoan}
               onDelete={handleDelete}
               onDeletePayment={handleDeletePayment}
+              isDeleting={deletingLoanId === loan.id}
+              deletingPaymentId={deletingPaymentId}
             />
           ))}
           {paid.length > 0 && (
@@ -491,6 +515,8 @@ export default function Prestamos() {
                   onAddPayment={setPayingLoan}
                   onDelete={handleDelete}
                   onDeletePayment={handleDeletePayment}
+                  isDeleting={deletingLoanId === loan.id}
+                  deletingPaymentId={deletingPaymentId}
                 />
               ))}
             </>

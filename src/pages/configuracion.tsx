@@ -4,7 +4,7 @@ import { categoriesService, type Category } from '@/services/categories'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { creditCardsService, type CreditCard, type PaymentMethodType, PAYMENT_METHOD_LABELS } from '@/services/creditCards'
 import { toast } from 'react-toastify'
-import { Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X, CheckCircle, Pencil, Building2, Smartphone, Banknote } from 'lucide-react'
+import { Plus, Trash2, Tag, CreditCard as CreditCardIcon, CalendarDays, X, CheckCircle, Pencil, Building2, Smartphone, Banknote, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 /* ── Helpers de tipo de pago ── */
@@ -139,6 +139,7 @@ function ItemRow({
   onEdit,
   onDelete,
   deleteWarning,
+  isDeleting = false,
 }: {
   label: string
   sublabel?: string
@@ -146,6 +147,7 @@ function ItemRow({
   onEdit?: () => void
   onDelete?: () => void
   deleteWarning?: string
+  isDeleting?: boolean
 }) {
   const [pending, setPending] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -186,7 +188,7 @@ function ItemRow({
         </AnimatePresence>
         </div>
       </div>
-      <div className='ml-3 flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all'>
+      <div className={`ml-3 flex-shrink-0 flex items-center gap-1 transition-all ${isDeleting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
         {onEdit && (
           <button
             onClick={onEdit}
@@ -199,14 +201,19 @@ function ItemRow({
         {onDelete && (
           <button
             onClick={handleDeleteClick}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+            disabled={isDeleting}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
               pending
                 ? 'opacity-100 bg-danger text-white hover:bg-danger/90'
                 : 'hover:bg-danger/10 text-danger'
             }`}
-            title={pending ? 'Confirmar eliminación' : 'Eliminar'}
+            title={isDeleting ? 'Eliminando…' : pending ? 'Confirmar eliminación' : 'Eliminar'}
           >
-            {pending ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+            {isDeleting
+              ? <Loader2 size={13} className='animate-spin' />
+              : pending
+              ? <CheckCircle size={13} />
+              : <Trash2 size={13} />}
           </button>
         )}
       </div>
@@ -336,7 +343,11 @@ export default function Configuracion() {
     }
   }
 
+  const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null)
+  const [deletingCardId, setDeletingCardId] = useState<number | null>(null)
+
   const handleDeleteCategory = async (id: number) => {
+    setDeletingCategoryId(id)
     try {
       await categoriesService.delete(id)
       setCategories((prev) => prev.filter((c) => c.id !== id))
@@ -344,6 +355,8 @@ export default function Configuracion() {
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Error al eliminar categoría'
       toast.error(msg)
+    } finally {
+      setDeletingCategoryId(null)
     }
   }
 
@@ -388,6 +401,7 @@ export default function Configuracion() {
   }
 
   const handleDeleteCard = async (id: number) => {
+    setDeletingCardId(id)
     try {
       await creditCardsService.delete(id)
       setCreditCards((prev) => prev.filter((c) => c.id !== id))
@@ -395,6 +409,8 @@ export default function Configuracion() {
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Error al eliminar método de pago'
       toast.error(msg)
+    } finally {
+      setDeletingCardId(null)
     }
   }
 
@@ -439,6 +455,7 @@ export default function Configuracion() {
               onEdit={!c.isSystem ? () => openEditCategory(c) : undefined}
               onDelete={!c.isSystem ? () => handleDeleteCategory(c.id) : undefined}
               deleteWarning='¿Confirmar? Los registros con esta categoría la perderán.'
+              isDeleting={deletingCategoryId === c.id}
             />
           ))}
         </Section>

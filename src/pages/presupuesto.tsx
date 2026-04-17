@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Target, Plus, Pencil, Trash2, X, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Target, Plus, Pencil, Trash2, X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { fiscalYearsService, type FiscalYear } from '@/services/fiscalYears'
 import { categoriesService, type Category } from '@/services/categories'
@@ -91,10 +91,12 @@ function BudgetCard({
   budget,
   onEdit,
   onDelete,
+  isDeleting,
 }: {
   budget: Budget
   onEdit: (b: Budget) => void
   onDelete: (id: number) => void
+  isDeleting: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -150,12 +152,17 @@ function BudgetCard({
           </button>
           <button
             onClick={handleDeleteClick}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+            disabled={isDeleting}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
               confirmDelete ? 'bg-danger text-white' : 'text-danger hover:bg-danger/10'
             }`}
-            title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar presupuesto'}
+            title={isDeleting ? 'Eliminando…' : confirmDelete ? 'Confirmar eliminación' : 'Eliminar presupuesto'}
           >
-            {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+            {isDeleting
+              ? <Loader2 size={13} className='animate-spin' />
+              : confirmDelete
+              ? <CheckCircle size={13} />
+              : <Trash2 size={13} />}
           </button>
         </div>
       </div>
@@ -300,13 +307,18 @@ export default function Presupuesto() {
     }
   }
 
+  const [deletingBudgetId, setDeletingBudgetId] = useState<number | null>(null)
+
   const handleDelete = async (id: number) => {
+    setDeletingBudgetId(id)
     try {
       await budgetsService.delete(id)
       setBudgets((prev) => prev.filter((b) => b.id !== id))
       toast.success('Presupuesto eliminado')
     } catch {
       toast.error('Error al eliminar el presupuesto')
+    } finally {
+      setDeletingBudgetId(null)
     }
   }
 
@@ -400,6 +412,7 @@ export default function Presupuesto() {
               budget={b}
               onEdit={openEdit}
               onDelete={handleDelete}
+              isDeleting={deletingBudgetId === b.id}
             />
           ))}
         </div>

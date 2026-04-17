@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Repeat2, Plus, Pencil, Trash2, X, CheckCircle, CalendarDays, Tag } from 'lucide-react'
+import { Repeat2, Plus, Pencil, Trash2, X, CheckCircle, CalendarDays, Tag, Loader2 } from 'lucide-react'
 import { BaseLayout } from '@/components/shared/base-layout'
 import { categoriesService, type Category } from '@/services/categories'
 import { recurringExpensesService, type RecurringExpense, type CreateRecurringExpensePayload } from '@/services/recurringExpenses'
@@ -91,10 +91,12 @@ function ExpenseRow({
   expense,
   onEdit,
   onDelete,
+  isDeleting,
 }: {
   expense: RecurringExpense
   onEdit: (e: RecurringExpense) => void
   onDelete: (id: number) => void
+  isDeleting: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -145,12 +147,17 @@ function ExpenseRow({
         </button>
         <button
           onClick={handleDeleteClick}
-          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+          disabled={isDeleting}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
             confirmDelete ? 'bg-danger text-white' : 'text-danger hover:bg-danger/10'
           }`}
-          title={confirmDelete ? 'Confirmar' : 'Eliminar'}
+          title={isDeleting ? 'Eliminando…' : confirmDelete ? 'Confirmar' : 'Eliminar'}
         >
-          {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+          {isDeleting
+            ? <Loader2 size={13} className='animate-spin' />
+            : confirmDelete
+            ? <CheckCircle size={13} />
+            : <Trash2 size={13} />}
         </button>
       </div>
     </div>
@@ -237,13 +244,18 @@ export default function Recurrentes() {
     }
   }
 
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
   const handleDelete = async (id: number) => {
+    setDeletingId(id)
     try {
       await recurringExpensesService.delete(id)
       setExpenses((prev) => prev.filter((e) => e.id !== id))
       toast.success('Gasto fijo eliminado')
     } catch {
       toast.error('Error al eliminar')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -292,6 +304,7 @@ export default function Recurrentes() {
                 expense={e}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+                isDeleting={deletingId === e.id}
               />
             ))}
           </div>
