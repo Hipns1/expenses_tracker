@@ -929,19 +929,33 @@ export default function Registros() {
               </div>
             ) : grouped ? (
               <div className='divide-y divide-secondary-50'>
-                {grouped.map(([month, recs]) => (
-                  <div key={month}>
-                    <div className='px-5 py-2.5 bg-secondary-50/60'>
-                      <span className='text-xs font-semibold text-text-muted uppercase tracking-wide'>{MONTHS[month - 1]}</span>
-                      <span className='ml-2 text-xs text-secondary-400'>{recs.length} registro{recs.length !== 1 ? 's' : ''}</span>
+                {grouped.map(([month, recs]) => {
+                  const mIncome = recs.filter(r => isIncome(r.type)).reduce((s, r) => s + r.amount, 0)
+                  const mExpense = recs.filter(r => !isIncome(r.type)).reduce((s, r) => s + r.amount, 0)
+                  const mBalance = mIncome - mExpense
+                  
+                  return (
+                    <div key={month}>
+                      <div className='px-5 py-2.5 bg-secondary-50/60 flex items-center justify-between'>
+                        <div className='flex items-center gap-2'>
+                          <span className='text-xs font-bold text-text-main uppercase tracking-wide'>{MONTHS[month - 1]}</span>
+                          <span className='text-[10px] font-medium text-secondary-400'>({recs.length} registro{recs.length !== 1 ? 's' : ''})</span>
+                        </div>
+                        <div className='flex items-center gap-1.5'>
+                          <span className='text-[10px] text-text-muted uppercase font-semibold'>Balance del mes:</span>
+                          <span className={`text-xs font-bold ${mBalance >= 0 ? 'text-primary' : 'text-danger'}`}>
+                            {mBalance >= 0 ? '+' : ''}{formatCurrency(mBalance)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className='px-3 py-1'>
+                        <AnimatePresence>
+                          {recs.map((r) => <RecordRow key={r.isLoan ? `loan_${r.id}` : r.id} record={r} />)}
+                        </AnimatePresence>
+                      </div>
                     </div>
-                    <div className='px-3 py-1'>
-                      <AnimatePresence>
-                        {recs.map((r) => <RecordRow key={r.isLoan ? `loan_${r.id}` : r.id} record={r} />)}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className='px-3 py-2'>
