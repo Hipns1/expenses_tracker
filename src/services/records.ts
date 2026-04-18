@@ -88,8 +88,11 @@ export interface SavingsResult {
 }
 
 export const recordsService = {
-    async getByYear(fiscalYearId: number): Promise<Record[]> {
-        return await apiConfig.get(`${endpoints.records.getByYear}/${fiscalYearId}`) as unknown as Record[]
+    async getByYear(fiscalYearId: number, month?: number): Promise<Record[]> {
+        const url = month 
+            ? `${endpoints.records.getByYear}/${fiscalYearId}?month=${month}`
+            : `${endpoints.records.getByYear}/${fiscalYearId}`
+        return await apiConfig.get(url) as unknown as Record[]
     },
     async compare(yearAId: number, yearBId: number): Promise<CompareResult> {
         return await apiConfig.get(`${endpoints.records.compare}?yearAId=${yearAId}&yearBId=${yearBId}`) as unknown as CompareResult
