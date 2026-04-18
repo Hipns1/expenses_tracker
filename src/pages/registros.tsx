@@ -508,8 +508,12 @@ export default function Registros() {
 
   /* ── Resumen ── */
   const { totalIncome, totalExpenses, balance } = useMemo(() => {
-    const totalIncome = filtered.filter((r) => isIncome(r.type)).reduce((s, r) => s + r.amount, 0)
-    const totalExpenses = filtered.filter((r) => r.type === 'Expense').reduce((s, r) => s + r.amount, 0)
+    const totalIncome = filtered
+      .filter((r) => isIncome(r.type) && !r.isLoan)
+      .reduce((s, r) => s + r.amount, 0)
+    const totalExpenses = filtered
+      .filter((r) => r.type === 'Expense' || r.isLoan)
+      .reduce((s, r) => s + r.amount, 0)
     return { totalIncome, totalExpenses, balance: totalIncome - totalExpenses }
   }, [filtered])
 
@@ -933,8 +937,8 @@ export default function Registros() {
             ) : grouped ? (
               <div className='divide-y divide-secondary-50'>
                 {grouped.map(([month, recs]) => {
-                  const mIncome = recs.filter(r => isIncome(r.type)).reduce((s, r) => s + r.amount, 0)
-                  const mExpense = recs.filter(r => !isIncome(r.type)).reduce((s, r) => s + r.amount, 0)
+                  const mIncome = recs.filter(r => isIncome(r.type) && !r.isLoan).reduce((s, r) => s + r.amount, 0)
+                  const mExpense = recs.filter(r => r.type === 'Expense' || r.isLoan).reduce((s, r) => s + r.amount, 0)
                   const mBalance = mIncome - mExpense
                   
                   return (
