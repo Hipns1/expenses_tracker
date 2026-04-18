@@ -885,7 +885,7 @@ export default function Registros() {
           </div>
 
           {/* ── Filtro por mes ── */}
-          <div className='flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar w-full min-h-[44px]'>
+          <div className='flex items-center gap-2 overflow-x-auto overflow-y-hidden h-14 no-scrollbar w-full'>
             <button
               onClick={() => setSelectedMonth(null)}
               className={`flex-shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
