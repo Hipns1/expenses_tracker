@@ -912,7 +912,7 @@ export default function Registros() {
           </div>
 
           {/* ── Lista ── */}
-          <div className='bg-white rounded-2xl border border-secondary-100 overflow-hidden'>
+          <div className='bg-white rounded-2xl border border-secondary-100'>
             {isLoadingRecords ? (
               <div className='py-16 flex items-center justify-center'>
                 <div className='w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin' />
