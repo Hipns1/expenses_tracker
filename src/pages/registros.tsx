@@ -885,30 +885,32 @@ export default function Registros() {
           </div>
 
           {/* ── Filtro por mes ── */}
-          <div className='flex items-center gap-2 overflow-x-auto overflow-y-hidden h-14 no-scrollbar w-full'>
-            <button
-              onClick={() => setSelectedMonth(null)}
-              className={`flex-shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                selectedMonth === null
-                  ? 'bg-text-main text-white shadow-sm'
-                  : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
-              }`}
-            >
-              Todos
-            </button>
-            {MONTHS.map((m, i) => (
+          <div className='flex-shrink-0'>
+            <div className='flex items-center gap-2 overflow-x-auto overflow-y-hidden h-16 no-scrollbar w-full'>
               <button
-                key={i}
-                onClick={() => setSelectedMonth(i + 1)}
+                onClick={() => setSelectedMonth(null)}
                 className={`flex-shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  selectedMonth === i + 1
+                  selectedMonth === null
                     ? 'bg-text-main text-white shadow-sm'
                     : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
                 }`}
               >
-                {m}
+                Todos
               </button>
-            ))}
+              {MONTHS.map((m, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedMonth(i + 1)}
+                  className={`flex-shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                    selectedMonth === i + 1
+                      ? 'bg-text-main text-white shadow-sm'
+                      : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* ── Lista ── */}
