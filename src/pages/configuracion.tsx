@@ -266,12 +266,15 @@ function GroupCard({ group, categories, onEdit, onDelete, onAddCategory, onEditC
           <button onClick={() => onEdit(group)} className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-secondary-100 text-text-muted hover:text-primary transition-colors'>
             <Pencil size={13} />
           </button>
-          <button
-            onClick={handleDeleteClick}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${confirmDelete ? 'bg-danger text-white' : 'hover:bg-danger/10 text-danger'}`}
-          >
-            {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
-          </button>
+          {groupCats.length === 0 && (
+            <button
+              onClick={handleDeleteClick}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${confirmDelete ? 'bg-danger text-white' : 'hover:bg-danger/10 text-danger'}`}
+              title='Eliminar grupo'
+            >
+              {confirmDelete ? <CheckCircle size={13} /> : <Trash2 size={13} />}
+            </button>
+          )}
         </div>
       </div>
       
@@ -296,11 +299,6 @@ function GroupCard({ group, categories, onEdit, onDelete, onAddCategory, onEditC
                   isDeleting={deletingId === c.id}
                 />
               ))
-            )}
-            {confirmDelete && (
-                <p className='text-[10px] text-danger font-medium px-3 pt-2 mt-2 border-t border-danger/10'>
-                    ¿Eliminar grupo? Las categorías se moverán a otro grupo.
-                </p>
             )}
           </motion.ul>
         )}

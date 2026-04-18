@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Wallet, CalendarDays, BookOpen, CreditCard,
-  CheckCircle, ChevronRight, Sparkles, Building2, Smartphone, Banknote
+  Wallet, CalendarDays, CreditCard,
+  CheckCircle, ChevronRight, Sparkles, Building2, Smartphone, Banknote,
+  Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,11 +40,11 @@ const STEPS: StepMeta[] = [
   },
   {
     id: 'category',
-    icon: <BookOpen size={22} />,
-    label: 'Categoría',
-    title: 'Crea tu primera categoría',
-    subtitle: 'Clasifica tus gastos para entender mejor en qué gastas.',
-    hint: 'Ejemplos: Alimentación, Transporte, Entretenimiento, Salud.',
+    icon: <Layers size={22} />,
+    label: 'Grupo',
+    title: 'Crea tu primer Grupo',
+    subtitle: 'Los grupos organizan tus categorías (ej: Vivienda, Ocio, Transporte).',
+    hint: 'Asociaremos automáticamente una categoría inicial con el mismo nombre.',
   },
   {
     id: 'card',
@@ -91,15 +92,12 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
 
         if (step.id === 'category') {
           if (!categoryName.trim()) {
-            toast.error('Ingresa un nombre de categoría')
+            toast.error('Ingresa un nombre para el grupo')
             return
           }
-          // Crear un grupo "General" por defecto para esta categoría inicial
-          let generalGroup = (await categoryGroupsService.getAll()).find(g => g.name === 'General')
-          if (!generalGroup) {
-            generalGroup = await categoryGroupsService.create('General')
-          }
-          await categoriesService.create(categoryName.trim(), generalGroup.id)
+          // Crear el grupo y una categoría semilla con el mismo nombre
+          const newGroup = await categoryGroupsService.create(categoryName.trim(), [])
+          await categoriesService.create(categoryName.trim(), newGroup.id)
         }
 
       if (step.id === 'card') {
@@ -297,7 +295,7 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
                     <Input
                       value={categoryName}
                       onChange={(e) => setCategoryName(e.target.value)}
-                      placeholder='Ej: Alimentación, Transporte...'
+                      placeholder='Ej: Gastos Fijos, Estilo de Vida...'
                       onKeyDown={(e) => e.key === 'Enter' && canSubmit() && handleSubmit()}
                       autoFocus
                     />
