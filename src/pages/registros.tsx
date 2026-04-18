@@ -126,8 +126,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 /* ── Resumen ── */
-function SummaryCard({ label, amount, icon: Icon, color, bg }: {
-  label: string; amount: number; icon: React.ElementType; color: string; bg: string
+function SummaryCard({ label, amount, icon: Icon, color, bg, subtitle }: {
+  label: string; amount: number; icon: React.ElementType; color: string; bg: string; subtitle?: string
 }) {
   return (
     <div className='bg-white rounded-2xl border border-secondary-100 p-5 flex items-center gap-4'>
@@ -137,6 +137,7 @@ function SummaryCard({ label, amount, icon: Icon, color, bg }: {
       <div className='min-w-0'>
         <p className='text-xs text-text-muted font-medium uppercase tracking-wide'>{label}</p>
         <p className='text-xl font-bold text-text-main truncate'>{formatCurrency(amount)}</p>
+        {subtitle && <p className='text-[11px] text-text-muted mt-0.5 truncate'>{subtitle}</p>}
       </div>
     </div>
   )
@@ -507,14 +508,17 @@ export default function Registros() {
   }, [records, selectedMonth])
 
   /* ── Resumen ── */
-  const { totalIncome, totalExpenses, balance } = useMemo(() => {
+  const { totalIncome, totalExpenses, totalLoans, balance } = useMemo(() => {
     const totalIncome = filtered
       .filter((r) => isIncome(r.type) && !r.isLoan)
+      .reduce((s, r) => s + r.amount, 0)
+    const totalLoans = filtered
+      .filter((r) => r.isLoan)
       .reduce((s, r) => s + r.amount, 0)
     const totalExpenses = filtered
       .filter((r) => r.type === 'Expense' || r.isLoan)
       .reduce((s, r) => s + r.amount, 0)
-    return { totalIncome, totalExpenses, balance: totalIncome - totalExpenses }
+    return { totalIncome, totalExpenses, totalLoans, balance: totalIncome - totalExpenses }
   }, [filtered])
 
   /* ── Agrupación por mes ── */
@@ -879,7 +883,14 @@ export default function Registros() {
           {/* ── Resumen ── */}
           <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
             <SummaryCard label='Ingresos' amount={totalIncome} icon={TrendingUp} color='text-success' bg='bg-success/10' />
-            <SummaryCard label='Gastos' amount={totalExpenses} icon={TrendingDown} color='text-danger' bg='bg-danger/10' />
+            <SummaryCard
+              label='Gastos'
+              amount={totalExpenses}
+              icon={TrendingDown}
+              color='text-danger'
+              bg='bg-danger/10'
+              subtitle={totalLoans > 0 ? `Incluye ${formatCurrency(totalLoans)} en préstamos` : undefined}
+            />
             <SummaryCard
               label='Balance'
               amount={balance}

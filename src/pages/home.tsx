@@ -39,14 +39,17 @@ export default function Home() {
     }).finally(() => setLoading(false))
   }, [selectedYearId])
 
-  const { totalIncome, totalExpenses, balance } = useMemo(() => {
+  const { totalIncome, totalExpenses, totalLoans, balance } = useMemo(() => {
     const totalIncome = records
       .filter(r => (r.type === 'IncomeNormal' || r.type === 'IncomeBonus') && !r.isLoan)
+      .reduce((s, r) => s + r.amount, 0)
+    const totalLoans = records
+      .filter(r => r.isLoan)
       .reduce((s, r) => s + r.amount, 0)
     const totalExpenses = records
       .filter(r => r.type === 'Expense' || r.isLoan)
       .reduce((s, r) => s + r.amount, 0)
-    return { totalIncome, totalExpenses, balance: totalIncome - totalExpenses }
+    return { totalIncome, totalExpenses, totalLoans, balance: totalIncome - totalExpenses }
   }, [records])
 
   // Monthly data for chart (IncomeNormal only, no bonuses)
@@ -108,7 +111,11 @@ export default function Home() {
               <TrendingDown size={18} className="text-danger" />
             </div>
             <p className="text-2xl font-bold text-text-main dark:text-white">{formatCurrency(totalExpenses)}</p>
-            <p className="text-xs text-text-muted">Total de egresos registrados</p>
+            <p className="text-xs text-text-muted">
+              {totalLoans > 0
+                ? `Incluye ${formatCurrency(totalLoans)} en préstamos`
+                : 'Total de egresos registrados'}
+            </p>
           </motion.div>
 
           <motion.div
