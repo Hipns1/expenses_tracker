@@ -41,10 +41,10 @@ export default function Home() {
 
   const { totalIncome, totalExpenses, balance } = useMemo(() => {
     const totalIncome = records
-      .filter(r => r.type === 'IncomeNormal' || r.type === 'IncomeBonus')
+      .filter(r => (r.type === 'IncomeNormal' || r.type === 'IncomeBonus') && !r.isLoan)
       .reduce((s, r) => s + r.amount, 0)
     const totalExpenses = records
-      .filter(r => r.type === 'Expense')
+      .filter(r => r.type === 'Expense' || r.isLoan)
       .reduce((s, r) => s + r.amount, 0)
     return { totalIncome, totalExpenses, balance: totalIncome - totalExpenses }
   }, [records])
