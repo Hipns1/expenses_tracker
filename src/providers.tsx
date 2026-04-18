@@ -16,6 +16,7 @@ export function Providers() {
   const user = useBoundStore((s) => s.user)
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState<'year' | 'category' | 'card'>('year')
+  const [dataStatus, setDataStatus] = useState({ hasYear: false, hasCategory: false, hasCard: false })
 
   useResetStoreOnLocationChange(resetHomeStore)
   useRefreshToken()
@@ -39,6 +40,13 @@ export function Providers() {
         ])
         const needsOnboarding =
           years.length === 0 || categories.length === 0 || cards.length === 0
+        
+        setDataStatus({
+          hasYear: years.length > 0,
+          hasCategory: categories.length > 0,
+          hasCard: cards.length > 0
+        })
+
         if (needsOnboarding) {
           if (years.length === 0) setOnboardingStep('year')
           else if (categories.length === 0) setOnboardingStep('category')
@@ -64,7 +72,13 @@ export function Providers() {
       <Outlet />
       <ToastContainer />
       {showOnboarding && (
-        <OnboardingModal initialStep={onboardingStep} onComplete={() => setShowOnboarding(false)} />
+        <OnboardingModal 
+          initialStep={onboardingStep} 
+          hasYear={dataStatus.hasYear}
+          hasCategory={dataStatus.hasCategory}
+          hasCard={dataStatus.hasCard}
+          onComplete={() => setShowOnboarding(false)} 
+        />
       )}
     </>
   )

@@ -16,6 +16,9 @@ import { toast } from 'react-toastify'
 interface OnboardingModalProps {
   onComplete: () => void
   initialStep?: 'year' | 'category' | 'card'
+  hasYear?: boolean
+  hasCategory?: boolean
+  hasCard?: boolean
 }
 
 type StepId = 'year' | 'category' | 'card'
@@ -56,7 +59,13 @@ const STEPS: StepMeta[] = [
   },
 ]
 
-export function OnboardingModal({ onComplete, initialStep = 'year' }: OnboardingModalProps) {
+export function OnboardingModal({ 
+  onComplete, 
+  initialStep = 'year',
+  hasYear = false,
+  hasCategory = false,
+  hasCard = false
+}: OnboardingModalProps) {
   const [currentStep, setCurrentStep] = useState(STEPS.findIndex((s) => s.id === initialStep))
   const [completed, setCompleted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -116,7 +125,22 @@ export function OnboardingModal({ onComplete, initialStep = 'year' }: Onboarding
       if (isLastStep) {
         setCompleted(true)
       } else {
-        setCurrentStep((s) => s + 1)
+        // Lógica de salto inteligente:
+        let nextIdx = currentStep + 1
+        
+        // Si el siguiente paso es Categoría y ya tiene, saltar a Tarjeta
+        if (STEPS[nextIdx]?.id === 'category' && hasCategory) {
+          nextIdx++
+        }
+        
+        // Si después del salto (o si el siguiente es Tarjeta) ya tiene Tarjeta, finalizar
+        if (STEPS[nextIdx]?.id === 'card' && hasCard) {
+            setCompleted(true)
+        } else if (nextIdx >= STEPS.length) {
+            setCompleted(true)
+        } else {
+            setCurrentStep(nextIdx)
+        }
       }
     } catch {
       toast.error('Ocurrió un error, intenta de nuevo')
