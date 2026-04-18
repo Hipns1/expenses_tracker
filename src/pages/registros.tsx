@@ -885,12 +885,12 @@ export default function Registros() {
           </div>
 
           {/* ── Filtro por mes ── */}
-          <div className='flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar'>
+          <div className='flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar w-full min-h-[44px]'>
             <button
               onClick={() => setSelectedMonth(null)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
+              className={`flex-shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                 selectedMonth === null
-                  ? 'bg-text-main text-white'
+                  ? 'bg-text-main text-white shadow-sm'
                   : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
               }`}
             >
@@ -900,13 +900,13 @@ export default function Registros() {
               <button
                 key={i}
                 onClick={() => setSelectedMonth(i + 1)}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex-shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                   selectedMonth === i + 1
-                    ? 'bg-text-main text-white'
+                    ? 'bg-text-main text-white shadow-sm'
                     : 'bg-white border border-secondary-200 text-text-muted hover:border-primary hover:text-primary'
                 }`}
               >
-                {m.slice(0, 3)}
+                {m}
               </button>
             ))}
           </div>
