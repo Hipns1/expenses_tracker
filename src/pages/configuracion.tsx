@@ -8,7 +8,7 @@ import { toast } from 'react-toastify'
 import {
   Plus, Trash2, CreditCard as CreditCardIcon, CalendarDays, X,
   CheckCircle, Pencil, Building2, Smartphone, Banknote, Loader2,
-  Layers, Target, ChevronDown, ChevronRight
+  Layers, Target, ChevronDown, ChevronRight, Upload, Download, Paperclip
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -307,6 +307,107 @@ function GroupCard({ group, categories, onEdit, onDelete, onAddCategory, onEditC
   )
 }
 
+/* ── Fila de año fiscal con adjunto ── */
+function FiscalYearRow({
+  year, isUploading, isDownloading,
+  onUpload, onDownload, onRemoveAttachment,
+}: {
+  year: FiscalYear
+  isUploading: boolean
+  isDownloading: boolean
+  onUpload: (file: File) => void
+  onDownload: () => void
+  onRemoveAttachment: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleRemoveClick = () => {
+    if (!confirmRemove) {
+      setConfirmRemove(true)
+      timerRef.current = setTimeout(() => setConfirmRemove(false), 3000)
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      setConfirmRemove(false)
+      onRemoveAttachment()
+    }
+  }
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) onUpload(file)
+    e.target.value = ''
+  }
+
+  return (
+    <li className='flex items-center justify-between py-2 px-3 rounded-xl hover:bg-secondary-50 group transition-colors'>
+      <div className='flex items-center gap-2.5 min-w-0'>
+        <CalendarDays size={14} className='text-text-muted flex-shrink-0' />
+        <div className='flex flex-col min-w-0'>
+          <span className='text-sm font-medium text-text-main'>{year.year}</span>
+          {year.hasAttachment && year.attachmentFileName && (
+            <span className='text-[10px] text-text-muted truncate flex items-center gap-1 mt-0.5'>
+              <Paperclip size={9} />
+              {year.attachmentFileName}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className='ml-3 flex-shrink-0 flex items-center gap-1'>
+        <input
+          ref={inputRef}
+          type='file'
+          accept='.xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg'
+          onChange={handleFileChange}
+          className='hidden'
+        />
+        {year.hasAttachment ? (
+          <>
+            <button
+              onClick={onDownload}
+              disabled={isDownloading}
+              title='Descargar soporte'
+              className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors disabled:opacity-50'
+            >
+              {isDownloading ? <Loader2 size={12} className='animate-spin' /> : <Download size={12} />}
+            </button>
+            <button
+              onClick={() => inputRef.current?.click()}
+              disabled={isUploading}
+              title='Reemplazar soporte'
+              className='w-7 h-7 flex items-center justify-center rounded-lg hover:bg-secondary-100 text-text-muted hover:text-primary transition-colors disabled:opacity-50'
+            >
+              {isUploading ? <Loader2 size={12} className='animate-spin' /> : <Upload size={12} />}
+            </button>
+            <button
+              onClick={handleRemoveClick}
+              title='Eliminar soporte'
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+                confirmRemove ? 'bg-danger text-white' : 'hover:bg-danger/10 text-danger'
+              }`}
+            >
+              {confirmRemove ? <CheckCircle size={12} /> : <Trash2 size={12} />}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={isUploading}
+            title='Subir soporte'
+            className='flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold hover:bg-primary/20 transition-colors disabled:opacity-50'
+          >
+            {isUploading ? <Loader2 size={11} className='animate-spin' /> : <Upload size={11} />}
+            Subir soporte
+          </button>
+        )}
+      </div>
+    </li>
+  )
+}
+
 /* ── Input simple ── */
 function ModalInput({ label, value, onChange, placeholder, type = 'text', maxLength }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; maxLength?: number }) {
   return (
@@ -458,6 +559,52 @@ export default function Configuracion() {
     } catch { toast.error('Error al prevenir orfanato') }
   }
 
+  /* ── Handlers adjuntos de año fiscal ── */
+  const [uploadingYearId, setUploadingYearId] = useState<number | null>(null)
+  const [downloadingYearId, setDownloadingYearId] = useState<number | null>(null)
+
+  const handleUploadAttachment = async (yearId: number, file: File) => {
+    setUploadingYearId(yearId)
+    try {
+      const updated = await fiscalYearsService.uploadAttachment(yearId, file)
+      setFiscalYears(prev => prev.map(y => y.id === yearId ? { ...y, hasAttachment: true, attachmentFileName: updated.attachmentFileName } : y))
+      toast.success('Soporte subido')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Error al subir el archivo')
+    } finally {
+      setUploadingYearId(null)
+    }
+  }
+
+  const handleDownloadAttachment = async (year: FiscalYear) => {
+    setDownloadingYearId(year.id)
+    try {
+      const blob = await fiscalYearsService.downloadAttachment(year.id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = year.attachmentFileName || `soporte-${year.year}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('No se pudo descargar')
+    } finally {
+      setDownloadingYearId(null)
+    }
+  }
+
+  const handleRemoveAttachment = async (yearId: number) => {
+    try {
+      await fiscalYearsService.deleteAttachment(yearId)
+      setFiscalYears(prev => prev.map(y => y.id === yearId ? { ...y, hasAttachment: false, attachmentFileName: null } : y))
+      toast.success('Soporte eliminado')
+    } catch {
+      toast.error('Error al eliminar adjunto')
+    }
+  }
+
   return (
     <BaseLayout titleHeader='Configuración'>
       <div className='flex flex-col gap-6 max-w-4xl'>
@@ -503,8 +650,18 @@ export default function Configuracion() {
             </Section>
 
             {/* ── ANOS ── */}
-            <Section icon={CalendarDays} title='Años Fiscales' onAdd={() => setOpenModal('year')} addLabel='Añadir' isEmpty={fiscalYears.length === 0} emptyText='—'>
-                {fiscalYears.map(f => <ItemRow key={f.id} label={String(f.year)} />)}
+            <Section icon={CalendarDays} title='Años Fiscales' subtitle='Adjunta un archivo de soporte por año.' onAdd={() => setOpenModal('year')} addLabel='Añadir' isEmpty={fiscalYears.length === 0} emptyText='—'>
+                {fiscalYears.map(f => (
+                    <FiscalYearRow
+                        key={f.id}
+                        year={f}
+                        isUploading={uploadingYearId === f.id}
+                        isDownloading={downloadingYearId === f.id}
+                        onUpload={(file) => handleUploadAttachment(f.id, file)}
+                        onDownload={() => handleDownloadAttachment(f)}
+                        onRemoveAttachment={() => handleRemoveAttachment(f.id)}
+                    />
+                ))}
             </Section>
         </div>
 

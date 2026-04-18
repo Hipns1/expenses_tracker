@@ -30,7 +30,8 @@
     "fiscalYears": {
         "getAll": "/FiscalYears",
         "create": "/FiscalYears",
-        "delete": "/FiscalYears"
+        "delete": "/FiscalYears",
+        "attachment": "/FiscalYears"
     },
     "creditCards": {
         "getAll": "/CreditCards",

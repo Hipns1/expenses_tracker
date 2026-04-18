@@ -16,7 +16,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  'Cesantías', 'Primas'
 ]
 
 const RECORD_TYPE_LABELS: { [K in RecordType]: string } = {
@@ -248,7 +249,7 @@ function RecordForm({
     form.amount !== '' &&
     parseInt(form.amount) > 0 &&
     form.month >= 1 &&
-    form.month <= 12 &&
+    form.month <= 14 &&
     form.categoryId !== '' &&
     form.creditCardId !== ''
 
