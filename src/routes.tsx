@@ -57,6 +57,7 @@ export function filterAccessibleRoutes(
       name: route?.name,
       titleMenu: route?.name,
       component: route?.component,
+      level: route?.level,
       lazy: async () =>
         // glob re-eval
         await import(`./pages/${route?.component}.tsx`).then((module) => {

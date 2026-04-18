@@ -33,6 +33,13 @@ export const Sidebar = () => {
       }))
     : []
 
+  // Ordenar rutas dinámicamente por el campo 'level' del Backend
+  const sortedRoutes = [...accessibleRoutes].sort((a, b) => {
+    const levelA = a.level ?? 999
+    const levelB = b.level ?? 999
+    return levelA - levelB
+  })
+
   const prevIsLgUp = useRef<boolean>(isMdUp)
   const isFirstRun = useRef(true)
 
@@ -86,7 +93,7 @@ export const Sidebar = () => {
           </p>
         )}
         <ul className='space-y-0.5'>
-          {accessibleRoutes.filter(r => !r.isExcludeNav).map((route) => (
+          {sortedRoutes.filter(r => !r.isExcludeNav).map((route) => (
             <li key={route.id}>
               <NavItem route={route} isCollapsed={collapsed} onClick={isMdUp ? undefined : closeMobile} />
             </li>

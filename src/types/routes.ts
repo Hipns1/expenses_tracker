@@ -12,4 +12,5 @@ export type RouteProps = {
   id?: number
   path?: string
   isActive?: boolean
+  level?: number
 } & Omit<RouteObject, 'children'>

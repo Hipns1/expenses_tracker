@@ -77,7 +77,10 @@ export function Providers() {
           hasYear={dataStatus.hasYear}
           hasCategory={dataStatus.hasCategory}
           hasCard={dataStatus.hasCard}
-          onComplete={() => setShowOnboarding(false)} 
+          onComplete={() => {
+            setShowOnboarding(false)
+            window.location.reload()
+          }} 
         />
       )}
     </>
