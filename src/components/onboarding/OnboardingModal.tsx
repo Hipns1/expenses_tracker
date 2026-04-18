@@ -66,7 +66,14 @@ export function OnboardingModal({
   hasCategory = false,
   hasCard = false
 }: OnboardingModalProps) {
-  const [currentStep, setCurrentStep] = useState(STEPS.findIndex((s) => s.id === initialStep))
+  // Verificamos si realmente necesitamos empezar en el paso inicial sugerido
+  const getStartingStep = () => {
+    const suggestedIdx = STEPS.findIndex((s) => s.id === initialStep)
+    if (suggestedIdx === 0 && hasYear) return 1 // Saltar a categoría si ya hay año
+    return suggestedIdx
+  }
+
+  const [currentStep, setCurrentStep] = useState(getStartingStep())
   const [completed, setCompleted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
