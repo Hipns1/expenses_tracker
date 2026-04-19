@@ -59,6 +59,7 @@ function CurrencyInput({ value, onChange, placeholder = '0', className }: {
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  'Cesantías', 'Primas',
 ]
 
 const fmt = (n: number) =>
